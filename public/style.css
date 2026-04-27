@@ -1,0 +1,43 @@
+* {
+    font-family: "Sarabun", sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.container {
+    background-image: url("/img/chisa-wuthering-3840x2160-24840.jpg");
+    background-size: cover;
+    /* ให้รูปขยายเต็มพื้นที่ */
+    background-position: center;
+    /* จัดรูปให้อยู่ตรงกลาง */
+    background-repeat: no-repeat;
+    min-height: 100vh;
+
+    /* Animation: fade in พื้นหลัง */
+    animation: fadeIn 0.6s ease both;
+}
+
+.main-content {
+    margin-left: 200px;
+    /* เลื่อนเนื้อหาออกมาไม่ให้ทับ sidebar ที่ fixed */
+    min-height: 100vh;
+
+    /* Animation: เนื้อหาหลักค่อยๆ โผล่ขึ้นมา */
+    animation: fadeInUp 0.6s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.menu a.active {
+    background: linear-gradient(90deg, #ff7eb3, #a786ff);
+    color: white;
+    box-shadow: 0 4px 15px rgba(167, 134, 255, 0.4);
+    animation: fadeInUp 0.4s 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both,
+               glowPulse 3s 1.5s ease-in-out infinite;
+}
+
+.menu a:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}

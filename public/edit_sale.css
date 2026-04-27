@@ -1,0 +1,339 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    /* ทำให้ sidebar กับ main วางข้างกัน */
+    align-items: flex-start;
+    /* บังคับให้ทุกอย่างชิดขอบบน */
+    background-color: #0f0a1a;
+}
+
+.menu a.buy {
+    background: linear-gradient(90deg, #ff7eb3, #a786ff);
+    color: white;
+    box-shadow: 0 4px 15px rgba(167, 134, 255, 0.4);
+    animation: fadeInUp 0.4s 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) both,
+               glowPulse 3s 1.5s ease-in-out infinite;
+}
+
+.menu a:hover:not(.buy) {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+/* จัดการพื้นที่หลัก */
+main {
+    top: 0;
+    background-color: #0f0a1a;
+    /* สีพื้นหลังให้เข้ากับโทนเว็บ */
+    min-height: 100vh;
+    color: white;
+    margin-left: 200px;
+    /* เลื่อนเนื้อหาออกมาไม่ให้ทับ sidebar ที่ fixed */
+
+    /* Animation: เนื้อหาค่อยๆ โผล่ขึ้นมา */
+    animation: fadeInUp 0.6s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Animation: หัวข้อ h1 */
+main h1 {
+    animation: fadeInUp 0.5s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* แต่งตาราง */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 20px;
+    background-color: #1a0b2e;
+    border-radius: 15px;
+    overflow: hidden;
+    /* ให้มุมตารางโค้งตาม border-radius */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+    /* Animation: ตาราง scale เข้ามา */
+    animation: scaleIn 0.5s 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ส่วนหัวตาราง */
+th {
+    background-color: #25163d;
+    color: #ff7eb3;
+    /* สีชมพูเดียวกับ Logo */
+    font-weight: 500;
+    text-align: left;
+    padding: 15px;
+    border-bottom: 2px solid #2a1b3d;
+    text-transform: uppercase;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+/* ส่วนเนื้อหา */
+td {
+    padding: 14px 15px;
+    border-bottom: 1px solid #2a1b3d;
+    color: #e0e0e0;
+    font-size: 15px;
+}
+
+/* แถวตาราง */
+tr:last-child td {
+    border-bottom: none;
+}
+
+/* Animation: แถวค่อยๆ โผล่ (stagger) */
+tbody tr {
+    animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+tbody tr:nth-child(1)  { animation-delay: 0.55s; }
+tbody tr:nth-child(2)  { animation-delay: 0.62s; }
+tbody tr:nth-child(3)  { animation-delay: 0.69s; }
+tbody tr:nth-child(4)  { animation-delay: 0.76s; }
+tbody tr:nth-child(5)  { animation-delay: 0.83s; }
+tbody tr:nth-child(6)  { animation-delay: 0.90s; }
+tbody tr:nth-child(7)  { animation-delay: 0.97s; }
+tbody tr:nth-child(8)  { animation-delay: 1.04s; }
+tbody tr:nth-child(9)  { animation-delay: 1.11s; }
+tbody tr:nth-child(10) { animation-delay: 1.18s; }
+
+/* Hover Effect ให้แถวสว่างขึ้นเมื่อชี้ */
+tr:hover td {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: white;
+    cursor: pointer;
+}
+
+/* ตกแต่งข้อความ "ไม่มีข้อมูล" */
+td[colspan="100%"] {
+    text-align: center;
+    padding: 50px;
+    color: #666;
+    font-style: italic;
+}
+
+.item-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #ff7eb3;
+    transition: all 0.3s ease;
+}
+
+/* Hover effect */
+.item-checkbox:hover {
+    transform: scale(1.1);
+}
+
+/* Checked state */
+.item-checkbox:checked {
+    box-shadow: 0 0 8px rgba(255, 126, 179, 0.5);
+}
+
+/* Focus state (accessibility) */
+.item-checkbox:focus {
+    outline: 2px solid rgba(255, 126, 179, 0.6);
+    outline-offset: 2px;
+}
+
+/* จัดการ Container หลัก */
+.btn {
+    display: flex;
+    justify-content: space-between;
+    /* แยกปุ่มยืนยัน กับ กลุ่มปุ่มเพิ่ม/ลบ ออกจากกัน */
+    align-items: center;
+    border-radius: 12px;
+    margin-top: 10px;
+    gap: 10px;
+
+    /* Animation: ปุ่มค่อยๆ โผล่ */
+    animation: fadeInUp 0.5s 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* สไตล์ปุ่มทั่วไป */
+.btn button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+/* ปุ่มยืนยัน (ฝั่งซ้าย) */
+.btn>button {
+    background-color: #6d28d9;
+    /* ม่วงเข้ม */
+    color: rgb(255, 255, 255);
+    box-shadow: 0 4px 6px -1px rgba(109, 40, 217, 0.3);
+}
+
+.btn>button:hover {
+    background-color: #5b21b6;
+    transform: translateY(-1px);
+}
+
+/* กลุ่มปุ่มเพิ่ม/ลบ (ฝั่งขวา) */
+.add {
+    display: flex;
+    gap: 8px;
+}
+
+/* ปุ่มเพิ่ม */
+.add button:first-child {
+    background-color: #009df8;
+    color: #f1f1f1;
+}
+
+.add button:first-child:hover {
+    background-color: #ddd6fe;
+}
+
+/* ปุ่มลบ */
+.add button:last-child {
+    background-color: #ff0000;
+    /* แซมชมพู/แดงนิดๆ ให้รู้ว่าเป็นปุ่มลบ */
+    color: #ffffff;
+}
+
+.add button:last-child:hover {
+    background-color: #ffe4e6;
+}
+
+.search-form {
+    margin: 30px 0;
+    display: flex;
+    justify-content: center;
+
+    /* Animation: ฟอร์มค้นหาค่อยๆ โผล่ */
+    animation: fadeInUp 0.5s 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.search-container:focus-within {
+    border-color: #ff7eb3;
+    box-shadow: 0 8px 30px rgba(255, 126, 179, 0.3);
+    transform: translateY(-2px);
+}
+
+.search-input-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    background: #f8f9fa;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+.search-input-group:focus-within {
+    background: white;
+    border-color: #ff7eb3;
+    box-shadow: 0 0 0 3px rgba(255, 126, 179, 0.1);
+}
+
+.search-input-group i {
+    color: #ff7eb3;
+    font-size: 16px;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    color: #333;
+    width: 100vh;
+    height: 30px;
+}
+
+.search-input::placeholder {
+    color: #999;
+}
+
+.btn-search,
+.btn-clear {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    text-decoration: none;
+    font-family: 'Sarabun', sans-serif;
+}
+
+.btn-search {
+    background: linear-gradient(135deg, #ff7eb3 0%, #ff9ec7 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 126, 179, 0.3);
+    height: 50px;
+}
+
+.btn-search:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(255, 126, 179, 0.5);
+}
+
+.btn-search:active {
+    transform: translateY(-1px);
+}
+
+.btn-clear {
+    background: linear-gradient(135deg, #6c757d 0%, #8a959e 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    height: 50px;
+}
+
+.btn-clear:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(108, 117, 125, 0.5);
+
+}
+
+.btn-clear:active {
+    transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .search-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .search-input-group {
+        width: 100%;
+    }
+
+    .btn-search,
+    .btn-clear {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 16px;
+    }
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="menubar.css">
+    <link rel="stylesheet" href="edit_sale.css">
+    <link rel="stylesheet" href="model.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Document</title>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>ระบบ ERP</h2>
+            <span>ระดับจงกร</span><br>
+        </div>
+
+        <nav class="menu">
+            <a href="<%= baseUrl %>/" class="active">Dashboard</a>
+            <a href="<%= baseUrl %>/sale_pr" class="buy">เสนอซื้อ</a>
+            <a href="#">เสนอขาย</a>
+            <a href="#">คลังสินค้า</a>
+        </nav>
+    </aside>
+    <main style="padding: 20px;">
+
+
+        <% if (order && order.length> 0) { %>
+            <h1>แก้ไขข้อมูลการเสนอขาย สำหรับ <%= order[0]['ลูกค้า-ผู้ขาย'] %>
+            </h1>
+            <% } else { %>
+                <h1>แก้ไขข้อมูลการเสนอขาย</h1>
+                <% } %>
+                    <table>
+                        <thead>
+                            <tr>
+                                <% if (order && order.length> 0) { %>
+                                    <% Object.keys(order[0]).forEach(h=> { %>
+                                        <th>
+                                            <%= h %>
+                                        </th>
+                                        <% }) %>
+                                            <% } %>
+                            </tr>
+                        </thead>
+                        <tbody class="order">
+                            <% if (order && order.length> 0) { %>
+                                <% order.forEach(row=> { %>
+                                    <tr>
+                                        <% Object.values(row).forEach(val=> { %>
+                                            <td>
+                                                <%= val %>
+                                            </td>
+                                            <% }) %>
+
+
+                                    </tr>
+                                    <% }) } else { %>
+                                        <tr>
+                                            <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                                        </tr>
+                                        <% } %>
+                        </tbody>
+
+                        <table>
+
+                            <form action="/edit_sale" method="GET" class="search-form">
+                                <div class="search-container">
+                                    <input type="hidden" name="id" value="<%= idToEdit %>">
+                                    <div class="search-input-group">
+                                        <i class="fas fa-search"></i>
+                                        <input type="text" name="search" value="<%= search %>"
+                                            placeholder="ค้นหาชื่อสินค้า" class="search-input">
+                                    </div>
+                                    <button type="submit" class="btn-search">
+                                        <i class="fas fa-search"></i> ค้นหา
+                                    </button>
+                                    <a href="/sale_pr" class="btn-clear">
+                                        <i class="fas fa-sync-alt"></i> ล้างค่า
+                                    </a>
+                                </div>
+                            </form>
+                            <thead>
+                                <tr>
+                                    <% if (sale_pr && sale_pr.length> 0) { %>
+                                        <% Object.keys(sale_pr[0]).forEach(h=> { %>
+                                            <th>
+                                                <%= h %>
+                                            </th>
+                                            <% }) %>
+                                                <th style="text-align: center;">จัดการ</th>
+
+                                                <% } %>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (sale_pr && sale_pr.length> 0) { %>
+                                    <% sale_pr.forEach(row=> { %>
+                                        <tr class="item">
+                                            <% Object.values(row).forEach(val=> { %>
+                                                <td>
+                                                    <%= val %>
+                                                        <% }) %>
+                                                <td style="text-align: center;">
+                                                    <input type="checkbox" id="item-<%= row.id %>" class="item-checkbox"
+                                                        value="<%= row.id %>" data-id="<%= row.id %>">
+                                                    <label for="item-sp-6922-001">
+                                                    </label>
+                                                </td>
+                                                </td>
+
+                                        </tr>
+
+                                        <% }) } else { %>
+                                            <tr>
+                                                <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                                            </tr>
+                                            <% } %>
+                            </tbody>
+                        </table>
+                        <div class="btn">
+
+                            <button>ยืนยัน</button>
+                            <div class="add">
+
+                                <button class="btn-add" onclick="openModal()">
+                                    <i class="fas fa-plus"></i> เพิ่ม
+                                </button>
+
+                                <%- include('modal.ejs') %>
+
+                                    <script>
+                                        // ดึงข้อมูลสินค้าจาก Google Sheet ผ่าน Server
+                                        const allProducts = <%- JSON.stringify(allProducts) %>;
+                                        console.log('สินค้าทั้งหมดที่โหลดมา:', allProducts);
+                                    </script>
+
+                                    <script src="model.js"></script>
+                                    <button>ลบ</button>
+                            </div>
+                        </div>
+    </main>
+</body>
+
+</html>

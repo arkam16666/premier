@@ -1,0 +1,64 @@
+<div id="productModal" class="modal-overlay">
+    <div class="modal-panel">
+
+        <div class="modal-header">
+            <h2>เลือกสินค้า</h2>
+        </div>
+
+        <div class="modal-search">
+            <input type="text" id="productSearch" placeholder="ค้นหาสินค้า..." class="modal-search-input">
+        </div>
+
+        <div class="modal-body">
+            <table class="modal-table">
+                <thead>
+                    <tr>
+                        <th class="col-check">เลือก</th>
+                        <th>รหัส</th>
+                        <th>ชื่อสินค้า</th>
+                        <th>ราคา</th>
+                        <th>แบรนด์</th>
+                        <th class="col-qty">จำนวน</th>
+                    </tr>
+                </thead>
+                <tbody id="productList">
+                    <% if (typeof allProducts !=='undefined' && allProducts.length> 0) { %>
+                        <% allProducts.forEach(function(product, index) { %>
+                            <tr class="product-row" style="animation-delay: <%= index * 0.04 %>s;">
+                                <td class="col-check">
+                                    <input type="checkbox" class="product-checkbox" value="<%= product['id'] %>">
+                                </td>
+                                <td>
+                                    <%= product['รหัส'] %>
+                                </td>
+                                <td>
+                                    <%= product['ชื่อ'] %>
+                                </td>
+                                <td>
+                                    <%= product['ราคาขาย'] %>
+                                </td>
+                                <td>
+                                    <%= product['แบรนด์'] %>
+                                </td>
+                                <td class="col-qty">
+                                    <input type="number" class="product-qty" value="0" min="0">
+                                </td>
+                            </tr>
+                            <% }); %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="6" class="empty-message">ไม่มีข้อมูลสินค้า</td>
+                                    </tr>
+                                    <% } %>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="modal-footer">
+            <span id="selectedCount" class="selected-count">เลือก 0 รายการ</span>
+            <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+            <button class="btn-confirm" onclick="addSelectedProducts()">เพิ่ม</button>
+        </div>
+
+    </div>
+</div>

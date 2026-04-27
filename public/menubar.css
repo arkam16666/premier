@@ -1,0 +1,111 @@
+* {
+    font-family: "Sarabun", sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ===== Keyframes ===== */
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        transform: translateY(25px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.85);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 4px 15px rgba(167, 134, 255, 0.4); }
+    50%      { box-shadow: 0 4px 25px rgba(255, 126, 179, 0.6); }
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+    width: 200px;
+    min-width: 200px;
+    height: 100vh;
+    /* ให้สูงเท่ากับความสูงหน้าจอพอดี */
+    background-color: #1a0b2e;
+    /* สีพื้นหลังเข้มๆ แบบในรูป */
+    color: white;
+    position: fixed;
+    /* ติดซ้ายตลอดแม้เลื่อน scroll */
+    top: 0;
+    left: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+
+    /* Animation: เลื่อนเข้าจากซ้าย */
+    animation: slideInLeft 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ===== Logo ===== */
+.logo {
+    animation: scaleIn 0.5s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ===== Menu Links ===== */
+.menu a {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: #b0a8ba;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+
+    /* Animation: ค่อยๆ โผล่ทีละปุ่ม (stagger) */
+    opacity: 0;
+    animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.menu a:nth-child(1) { animation-delay: 0.45s; }
+.menu a:nth-child(2) { animation-delay: 0.55s; }
+.menu a:nth-child(3) { animation-delay: 0.65s; }
+.menu a:nth-child(4) { animation-delay: 0.75s; }
+
+/* ปุ่มที่ถูกเลือก (Active) ให้มีสี Gradient แบบในรูป */
+
+
+.logo span {
+    display: block;
+    margin-top: 5px;
+    color: #aaa9a9;
+}

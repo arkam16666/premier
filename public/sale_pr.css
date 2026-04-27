@@ -1,0 +1,195 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    /* ทำให้ sidebar กับ main วางข้างกัน */
+    align-items: flex-start;
+    /* บังคับให้ทุกอย่างชิดขอบบน */
+    background-color: #0f0a1a;
+}
+
+.menu a.buy {
+    background: linear-gradient(90deg, #ff7eb3, #a786ff);
+    color: white;
+    box-shadow: 0 4px 15px rgba(167, 134, 255, 0.4);
+    animation: fadeInUp 0.4s 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) both,
+               glowPulse 3s 1.5s ease-in-out infinite;
+}
+
+.menu a:hover:not(.buy) {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+/* จัดการพื้นที่หลัก */
+main {
+    top: 0;
+    background-color: #0f0a1a;
+    /* สีพื้นหลังให้เข้ากับโทนเว็บ */
+    min-height: 100vh;
+    color: white;
+    margin-left: 200px;
+    /* เลื่อนเนื้อหาออกมาไม่ให้ทับ sidebar ที่ fixed */
+
+    /* Animation: เนื้อหาค่อยๆ โผล่ขึ้นมา */
+    animation: fadeInUp 0.6s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* แต่งตาราง */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 20px;
+    background-color: #1a0b2e;
+    border-radius: 15px;
+    overflow: hidden;
+    /* ให้มุมตารางโค้งตาม border-radius */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+    /* Animation: ตาราง scale เข้ามา */
+    animation: scaleIn 0.5s 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ส่วนหัวตาราง */
+th {
+    background-color: #25163d;
+    color: #ff7eb3;
+    /* สีชมพูเดียวกับ Logo */
+    font-weight: 500;
+    text-align: left;
+    padding: 15px;
+    border-bottom: 2px solid #2a1b3d;
+    text-transform: uppercase;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+/* ส่วนเนื้อหา */
+td {
+    padding: 14px 15px;
+    border-bottom: 1px solid #2a1b3d;
+    color: #e0e0e0;
+    font-size: 15px;
+}
+
+/* แถวตาราง */
+tr:last-child td {
+    border-bottom: none;
+}
+
+/* Animation: แถวค่อยๆ โผล่ (stagger ด้วย JS-free CSS) */
+tbody tr {
+    animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+tbody tr:nth-child(1)  { animation-delay: 0.55s; }
+tbody tr:nth-child(2)  { animation-delay: 0.62s; }
+tbody tr:nth-child(3)  { animation-delay: 0.69s; }
+tbody tr:nth-child(4)  { animation-delay: 0.76s; }
+tbody tr:nth-child(5)  { animation-delay: 0.83s; }
+tbody tr:nth-child(6)  { animation-delay: 0.90s; }
+tbody tr:nth-child(7)  { animation-delay: 0.97s; }
+tbody tr:nth-child(8)  { animation-delay: 1.04s; }
+tbody tr:nth-child(9)  { animation-delay: 1.11s; }
+tbody tr:nth-child(10) { animation-delay: 1.18s; }
+
+/* Hover Effect ให้แถวสว่างขึ้นเมื่อชี้ */
+tr:hover td {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: white;
+    cursor: pointer;
+}
+
+/* ตกแต่งข้อความ "ไม่มีข้อมูล" */
+td[colspan="100%"] {
+    text-align: center;
+    padding: 50px;
+    color: #666;
+    font-style: italic;
+}
+
+a .fas.fa-pencil {
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: white;
+    transition: all 0.3s ease;
+    font-size: 12px;
+}
+
+/* คลุมส่วนของฟอร์มค้นหา */
+.search-container {
+    background: #30045a17;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    /* Animation: ฟอร์มค้นหาค่อยๆ โผล่ */
+    animation: fadeInUp 0.5s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ปรับแต่งช่อง Input */
+.search-input {
+    flex-grow: 1;
+    padding: 12px 16px;
+    border: 2px solid #ece2f0;
+    border-radius: 8px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+/* ปุ่มค้นหา */
+.btn-search {
+    background-color: #4a90e2;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-search:hover {
+    background-color: #357abd;
+}
+
+.btn-search:active {
+    transform: scale(0.98);
+}
+
+/* ปุ่มล้างค่า */
+.btn-clear {
+    text-decoration: none;
+    color: #64748b;
+    font-family: 'Kanit', sans-serif;
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-clear:hover {
+    background-color: #7a31da;
+    color: #1e293b;
+}
