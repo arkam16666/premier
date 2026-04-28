@@ -33,6 +33,7 @@ main {
     min-height: 100vh;
     color: white;
     margin-left: 200px;
+    width: calc(100% - 200px);
     /* เลื่อนเนื้อหาออกมาไม่ให้ทับ sidebar ที่ fixed */
 
     /* Animation: เนื้อหาค่อยๆ โผล่ขึ้นมา */
@@ -72,6 +73,7 @@ th {
     text-transform: uppercase;
     font-size: 14px;
     letter-spacing: 1px;
+    white-space: nowrap;
 }
 
 /* ส่วนเนื้อหา */
@@ -80,6 +82,7 @@ td {
     border-bottom: 1px solid #2a1b3d;
     color: #e0e0e0;
     font-size: 15px;
+    white-space: nowrap;
 }
 
 /* แถวตาราง */
@@ -261,7 +264,7 @@ td[colspan="100%"] {
     outline: none;
     font-size: 15px;
     color: #333;
-    width: 100vh;
+    width: 100%;
     height: 30px;
 }
 

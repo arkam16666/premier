@@ -38,7 +38,8 @@
             <% } else { %>
                 <h1>แก้ไขข้อมูลการเสนอขาย</h1>
                 <% } %>
-                    <table>
+            <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+                <table>
                         <thead>
                             <tr>
                                 <% if (order && order.length> 0) { %>
@@ -68,25 +69,27 @@
                                         </tr>
                                         <% } %>
                         </tbody>
+                    </table>
+                </div>
 
+                <form action="/edit_sale" method="GET" class="search-form">
+                            <input type="hidden" name="id" value="<%= idToEdit %>">
+                            <div class="search-input-group">
+                                <i class="fas fa-search"></i>
+                                <input type="text" name="search" value="<%= search %>"
+                                    placeholder="ค้นหาชื่อสินค้า" class="search-input">
+                            </div>
+                            <button type="submit" class="btn-search">
+                                <i class="fas fa-search"></i> ค้นหา
+                            </button>
+                            <a href="/sale_pr" class="btn-clear">
+                                <i class="fas fa-sync-alt"></i> ล้างค่า
+                            </a>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive" style="overflow-x: auto; width: 100%;">
                         <table>
-
-                            <form action="/edit_sale" method="GET" class="search-form">
-                                <div class="search-container">
-                                    <input type="hidden" name="id" value="<%= idToEdit %>">
-                                    <div class="search-input-group">
-                                        <i class="fas fa-search"></i>
-                                        <input type="text" name="search" value="<%= search %>"
-                                            placeholder="ค้นหาชื่อสินค้า" class="search-input">
-                                    </div>
-                                    <button type="submit" class="btn-search">
-                                        <i class="fas fa-search"></i> ค้นหา
-                                    </button>
-                                    <a href="/sale_pr" class="btn-clear">
-                                        <i class="fas fa-sync-alt"></i> ล้างค่า
-                                    </a>
-                                </div>
-                            </form>
                             <thead>
                                 <tr>
                                     <% if (sale_pr && sale_pr.length> 0) { %>
@@ -125,6 +128,7 @@
                                             <% } %>
                             </tbody>
                         </table>
+                    </div>
                         <div class="btn">
 
                             <button>ยืนยัน</button>

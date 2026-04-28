@@ -46,43 +46,45 @@
     </form>
 
 
-    <table>
-      <thead>
-        <tr>
-          <% if (data && data.length> 0) { %>
-            <% Object.keys(data[0]).forEach(h=> { %>
-              <th>
-                <%= h %>
-              </th>
-              <% }) %>
-
-                <th style="text-align: center;">จัดการ</th>
-                <% } %>
-        </tr>
-      </thead>
-      <tbody>
-        <% if (data && data.length> 0) { %>
-          <% data.forEach(row=> { %>
-            <tr>
-              <% Object.values(row).forEach(val=> { %>
-                <td>
-                  <%= val %>
-                </td>
+    <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+      <table>
+        <thead>
+          <tr>
+            <% if (data && data.length> 0) { %>
+              <% Object.keys(data[0]).forEach(h=> { %>
+                <th>
+                  <%= h %>
+                </th>
                 <% }) %>
 
-                  <td style="text-align: center;">
-                    <a href="/edit_sale?id=<%= row['id'] %>">
-                      <i class="fas fa-pencil"></i>
-                    </a>
-                  </td>
-            </tr>
-            <% }) } else { %>
+                  <th style="text-align: center;">จัดการ</th>
+                  <% } %>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (data && data.length> 0) { %>
+            <% data.forEach(row=> { %>
               <tr>
-                <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                <% Object.values(row).forEach(val=> { %>
+                  <td>
+                    <%= val %>
+                  </td>
+                  <% }) %>
+
+                    <td style="text-align: center;">
+                      <a href="/edit_sale?id=<%= row['id'] %>">
+                        <i class="fas fa-pencil"></i>
+                      </a>
+                    </td>
               </tr>
-              <% } %>
-      </tbody>
-    </table>
+              <% }) } else { %>
+                <tr>
+                  <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                </tr>
+                <% } %>
+        </tbody>
+      </table>
+    </div>
   </main>
 
 </body>
