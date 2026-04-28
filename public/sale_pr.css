@@ -154,6 +154,16 @@ a .fas.fa-pencil {
     font-size: 12px;
 }
 
+a i {
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: white;
+    transition: all 0.3s ease;
+    font-size: 12px;
+}
+
 /* คลุมส่วนของฟอร์มค้นหา */
 .search-container {
     background: #30045a17;

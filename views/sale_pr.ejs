@@ -33,8 +33,7 @@
 
   <main style="padding: 20px;">
     <form action="/sale_pr" method="GET" class="search-container">
-      <input type="text" name="search" class="search-input" value="<%= search %>"
-        placeholder="ค้นหาด้วย ID">
+      <input type="text" name="search" class="search-input" value="<%= search %>" placeholder="ค้นหาด้วย ID">
 
       <button type="submit" class="btn-search">
         <i class="fas fa-search"></i> ค้นหา
@@ -58,6 +57,7 @@
                 <% }) %>
 
                   <th style="text-align: center;">จัดการ</th>
+                  <th style="text-align: center;">ลบ</th>
                   <% } %>
           </tr>
         </thead>
@@ -76,6 +76,14 @@
                         <i class="fas fa-pencil"></i>
                       </a>
                     </td>
+
+                    <td style="text-align: center;">
+                      <a href="/delsale?id=<%= row['id'] %>" 
+                         class="delete-btn"
+                         onclick="return handleDelete(this, '<%= row['id'] %>')">
+                        <i class="fa-solid fa-trash"></i>
+                      </a>
+                    </td>
               </tr>
               <% }) } else { %>
                 <tr>
@@ -87,6 +95,22 @@
     </div>
   </main>
 
+  <script>
+    function handleDelete(link, id) {
+      if (confirm('คุณแน่ใจหรือไม่ที่จะลบข้อมูล ID: ' + id + '?')) {
+        link.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        link.style.pointerEvents = 'none';
+        return true; // Proceed to href
+      }
+      return false;
+    }
+
+    document.querySelector('.search-container').addEventListener('submit', function(e) {
+      const btn = this.querySelector('.btn-search');
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังค้นหา...';
+      btn.disabled = true;
+    });
+  </script>
 </body>
 
 </html>

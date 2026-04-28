@@ -10,19 +10,23 @@ const app = express();
 app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
+app.use(express.json());
 
 // ส่ง baseUrl ไปทุก view อัตโนมัติ
 app.use((req, res, next) => {
     res.locals.baseUrl = process.env.BASE_URL || '';
     next();
 });
-const sheets = google.sheets({
-    version: "v4",
-    auth: new google.auth.GoogleAuth({
-        keyFile: "./striped-buckeye-485807-t7-f6b5b7ca48b8.json",
-        scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-    }),
+const authReadonly = new google.auth.GoogleAuth({
+    keyFile: "./striped-buckeye-485807-t7-f6b5b7ca48b8.json",
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
 });
+const authWrite = new google.auth.GoogleAuth({
+    keyFile: "./striped-buckeye-485807-t7-f6b5b7ca48b8.json",
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+});
+const sheets = google.sheets({ version: "v4", auth: authReadonly });
+const sheetsWrite = google.sheets({ version: "v4", auth: authWrite });
 
 app.get("/api/sheets", async (req, res) => {
     try {
@@ -111,7 +115,6 @@ app.get("/edit_sale", async (req, res) => {
         let salePrData = mapDataByHeaders(subSalesData, subSaleHeaders);
         let orderData = mapDataByHeaders(salesData, saleHeaders);
         let allProducts = mapDataByHeaders(allProductsRaw, productHeaders);
-
         // ตัวกรอง (ถ้ามี searchQuery)
         if (searchQuery) {
             salePrData = salePrData.filter(item =>
@@ -178,6 +181,175 @@ app.get("/sale_pr", async (req, res) => {
     }
 });
 
+// เปลี่ยนจาก app.post เป็น app.get และลบ ?id ออกจาก path
+// ปรับปรุง /delsale ให้ลบทั้งใน sales_pr และ sub_sales_pr
+app.get("/delsale", async (req, res) => {
+    const idToDelete = req.query.id;
+
+    if (!idToDelete) {
+        return res.status(400).send("ไม่พบ ID ที่ต้องการลบ");
+    }
+
+    try {
+        const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+        // 1. หา Sheet IDs
+        const spreadsheet = await sheetsWrite.spreadsheets.get({ spreadsheetId });
+        const salesPrSheet = spreadsheet.data.sheets.find(s => s.properties.title === "sales_pr");
+        const subSalesPrSheet = spreadsheet.data.sheets.find(s => s.properties.title === "sub_sales_pr");
+
+        if (!salesPrSheet || !subSalesPrSheet) {
+            return res.status(500).send("ไม่พบ Sheet ที่ต้องการ");
+        }
+
+        // 2. หาแถวที่ต้องลบใน sales_pr
+        const salesPrRes = await sheetsWrite.spreadsheets.values.get({
+            spreadsheetId,
+            range: "sales_pr!A:A",
+        });
+        const salesPrRows = salesPrRes.data.values || [];
+        const salesPrIndex = salesPrRows.findIndex(row => row[0] === idToDelete);
+
+        // 3. หาแถวที่ต้องลบใน sub_sales_pr
+        const subSalesPrRes = await sheetsWrite.spreadsheets.values.get({
+            spreadsheetId,
+            range: "sub_sales_pr!A:A",
+        });
+        const subSalesPrRows = subSalesPrRes.data.values || [];
+        const subSalesPrIndices = [];
+        subSalesPrRows.forEach((row, index) => {
+            if (row[0] === idToDelete) subSalesPrIndices.push(index);
+        });
+
+        const requests = [];
+
+        // ลบใน sub_sales_pr (ลบจากล่างขึ้นบน)
+        if (subSalesPrIndices.length > 0) {
+            subSalesPrIndices.sort((a, b) => b - a).forEach(index => {
+                requests.push({
+                    deleteDimension: {
+                        range: {
+                            sheetId: subSalesPrSheet.properties.sheetId,
+                            dimension: "ROWS",
+                            startIndex: index,
+                            endIndex: index + 1
+                        }
+                    }
+                });
+            });
+        }
+
+        // ลบใน sales_pr
+        if (salesPrIndex !== -1) {
+            requests.push({
+                deleteDimension: {
+                    range: {
+                        sheetId: salesPrSheet.properties.sheetId,
+                        dimension: "ROWS",
+                        startIndex: salesPrIndex,
+                        endIndex: salesPrIndex + 1
+                    }
+                }
+            });
+        }
+
+        if (requests.length > 0) {
+            await sheetsWrite.spreadsheets.batchUpdate({
+                spreadsheetId,
+                requestBody: { requests },
+            });
+        }
+
+        console.log(`ลบข้อมูล ID: ${idToDelete} สำเร็จ`);
+        res.redirect("/sale_pr");
+
+    } catch (error) {
+        console.error("Error deleting order:", error);
+        res.status(500).send("เกิดข้อผิดพลาดในการลบข้อมูล: " + error.message);
+    }
+});
+
+
+// API ลบแถวจาก sub_sales_pr sheet
+app.post("/api/delete_rows", async (req, res) => {
+    const { id, productCodes } = req.body;
+    console.log('API /api/delete_rows called with:', { id, productCodes });
+    if (!id || !productCodes || !Array.isArray(productCodes) || productCodes.length === 0) {
+        return res.status(400).json({ error: "ต้องระบุ id และ productCodes" });
+    }
+
+    try {
+        const sheetName = "sub_sales_pr";
+        const result = await sheetsWrite.spreadsheets.values.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A1:Z`,
+        });
+
+        const allRows = result.data.values ?? [];
+        if (allRows.length === 0) return res.json({ deleted: 0 });
+
+        const headers = allRows[0];
+        const idColIndex = headers.indexOf("id");
+        const productColIndex = headers.indexOf("สินค้า");
+
+        if (idColIndex === -1 || productColIndex === -1) {
+            return res.status(500).json({ error: "ไม่พบคอลัมน์ id หรือ สินค้า ใน sheet" });
+        }
+
+        // หา sheet ID (gid) สำหรับ batchUpdate
+        const spreadsheet = await sheetsWrite.spreadsheets.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+        });
+        const sheetMeta = spreadsheet.data.sheets.find(
+            (s) => s.properties.title === sheetName
+        );
+        if (!sheetMeta) {
+            return res.status(500).json({ error: `ไม่พบ sheet ชื่อ ${sheetName}` });
+        }
+        const sheetId = sheetMeta.properties.sheetId;
+
+        // หาแถวที่ต้องลบ (index ใน sheet, 0-based)
+        const rowsToDelete = [];
+        for (let i = 1; i < allRows.length; i++) {
+            const row = allRows[i];
+            const rowId = (row[idColIndex] || "").toString().trim();
+            const rowProduct = (row[productColIndex] || "").toString().trim();
+            
+            if (rowId === id.trim() && productCodes.map(pc => pc.trim()).includes(rowProduct)) {
+                rowsToDelete.push(i);
+            }
+        }
+
+        if (rowsToDelete.length === 0) {
+            return res.json({ deleted: 0 });
+        }
+
+        // ลบจากล่างขึ้นบน เพื่อไม่ให้ index เลื่อน
+        rowsToDelete.sort((a, b) => b - a);
+
+        const requests = rowsToDelete.map((rowIndex) => ({
+            deleteDimension: {
+                range: {
+                    sheetId: sheetId,
+                    dimension: "ROWS",
+                    startIndex: rowIndex,
+                    endIndex: rowIndex + 1,
+                },
+            },
+        }));
+
+        await sheetsWrite.spreadsheets.batchUpdate({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            requestBody: { requests },
+        });
+
+        console.log(`ลบ ${rowsToDelete.length} แถว จาก ${sheetName} สำเร็จ`);
+        res.json({ deleted: rowsToDelete.length });
+    } catch (err) {
+        console.error("Error deleting rows:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 app.listen(process.env.PORT || 4000, "0.0.0.0", () =>
     console.log(`Server running on port ${process.env.PORT || 4000}`)

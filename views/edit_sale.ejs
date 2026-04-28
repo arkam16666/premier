@@ -85,8 +85,7 @@
                             <a href="/sale_pr" class="btn-clear">
                                 <i class="fas fa-sync-alt"></i> ล้างค่า
                             </a>
-                        </div>
-                    </form>
+                </form>
 
                     <div class="table-responsive" style="overflow-x: auto; width: 100%;">
                         <table>
@@ -103,22 +102,19 @@
                                                 <% } %>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="salePrBody">
                                 <% if (sale_pr && sale_pr.length> 0) { %>
                                     <% sale_pr.forEach(row=> { %>
-                                        <tr class="item">
+                                        <tr class="item" data-product="<%= row['สินค้า'] %>">
                                             <% Object.values(row).forEach(val=> { %>
                                                 <td>
                                                     <%= val %>
-                                                        <% }) %>
+                                                </td>
+                                                <% }) %>
                                                 <td style="text-align: center;">
-                                                    <input type="checkbox" id="item-<%= row.id %>" class="item-checkbox"
-                                                        value="<%= row.id %>" data-id="<%= row.id %>">
-                                                    <label for="item-sp-6922-001">
-                                                    </label>
+                                                    <input type="checkbox" class="item-checkbox"
+                                                        value="<%= row['สินค้า'] %>">
                                                 </td>
-                                                </td>
-
                                         </tr>
 
                                         <% }) } else { %>
@@ -131,26 +127,105 @@
                     </div>
                         <div class="btn">
 
-                            <button>ยืนยัน</button>
+                            <button type="button" id="btnConfirmDelete" onclick="confirmDelete()">ยืนยัน</button>
                             <div class="add">
 
-                                <button class="btn-add" onclick="openModal()">
+                                <button type="button" class="btn-add" onclick="openModal()">
                                     <i class="fas fa-plus"></i> เพิ่ม
                                 </button>
 
                                 <%- include('modal.ejs') %>
 
-                                    <script>
-                                        // ดึงข้อมูลสินค้าจาก Google Sheet ผ่าน Server
-                                        const allProducts = <%- JSON.stringify(allProducts) %>;
-                                        console.log('สินค้าทั้งหมดที่โหลดมา:', allProducts);
-                                    </script>
-
                                     <script src="model.js"></script>
-                                    <button>ลบ</button>
+                                    <button type="button" id="btnSoftDelete" onclick="softDelete()">ลบ</button>
                             </div>
                         </div>
     </main>
+
+    <script>
+        // ย้ายข้อมูลมาไว้ที่นี่เพื่อให้เข้าถึงได้แน่นอน
+        var allProducts = <%- JSON.stringify(allProducts || []) %>;
+        var currentEditId = '<%= idToEdit %>';
+        var pendingDeletes = [];
+
+        console.log('Page loaded for ID:', currentEditId);
+        console.log('Total products loaded:', allProducts.length);
+
+        // ปุ่มลบ: ซ่อนแถวที่ติ๊กเลือกออกจากหน้าจอ + เก็บไว้ใน pendingDeletes
+        function softDelete() {
+            var checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('กรุณาเลือกรายการที่ต้องการลบ');
+                return;
+            }
+
+            checkboxes.forEach(function(cb) {
+                var row = cb.closest('tr');
+                var productCode = row.getAttribute('data-product');
+
+                if (pendingDeletes.indexOf(productCode) === -1) {
+                    pendingDeletes.push(productCode);
+                }
+
+                row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-20px)';
+                setTimeout(function() {
+                    row.style.display = 'none';
+                }, 300);
+
+                cb.checked = false;
+            });
+
+            console.log('รอลบ:', pendingDeletes);
+        }
+
+        // ปุ่มยืนยัน: ลบจาก Google Sheet จริง
+        function confirmDelete() {
+            console.log('confirmDelete called. Pending:', pendingDeletes);
+            
+            if (pendingDeletes.length === 0) {
+                alert('ไม่มีรายการที่ต้องลบ');
+                return;
+            }
+
+            if (!confirm('ยืนยันการลบ ' + pendingDeletes.length + ' รายการออกจากระบบ?')) {
+                return;
+            }
+
+            var btn = document.getElementById('btnConfirmDelete');
+            var originalText = btn.innerText;
+            btn.innerText = 'กำลังลบ...';
+            btn.disabled = true;
+
+            fetch('/api/delete_rows', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: currentEditId,
+                    productCodes: pendingDeletes
+                })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.error) {
+                    alert('เกิดข้อผิดพลาด: ' + data.error);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    return;
+                }
+                alert('ลบสำเร็จ ' + data.deleted + ' รายการ');
+                pendingDeletes = [];
+                window.location.reload();
+            })
+            .catch(function(err) {
+                console.error('Delete error:', err);
+                alert('เกิดข้อผิดพลาด: ' + err.message);
+                btn.innerText = originalText;
+                btn.disabled = false;
+            });
+        }
+    </script>
 </body>
 
 </html>

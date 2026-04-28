@@ -17,7 +17,7 @@ body {
     color: white;
     box-shadow: 0 4px 15px rgba(167, 134, 255, 0.4);
     animation: fadeInUp 0.4s 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) both,
-               glowPulse 3s 1.5s ease-in-out infinite;
+        glowPulse 3s 1.5s ease-in-out infinite;
 }
 
 .menu a:hover:not(.buy) {
@@ -94,16 +94,46 @@ tr:last-child td {
 tbody tr {
     animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
-tbody tr:nth-child(1)  { animation-delay: 0.55s; }
-tbody tr:nth-child(2)  { animation-delay: 0.62s; }
-tbody tr:nth-child(3)  { animation-delay: 0.69s; }
-tbody tr:nth-child(4)  { animation-delay: 0.76s; }
-tbody tr:nth-child(5)  { animation-delay: 0.83s; }
-tbody tr:nth-child(6)  { animation-delay: 0.90s; }
-tbody tr:nth-child(7)  { animation-delay: 0.97s; }
-tbody tr:nth-child(8)  { animation-delay: 1.04s; }
-tbody tr:nth-child(9)  { animation-delay: 1.11s; }
-tbody tr:nth-child(10) { animation-delay: 1.18s; }
+
+tbody tr:nth-child(1) {
+    animation-delay: 0.55s;
+}
+
+tbody tr:nth-child(2) {
+    animation-delay: 0.62s;
+}
+
+tbody tr:nth-child(3) {
+    animation-delay: 0.69s;
+}
+
+tbody tr:nth-child(4) {
+    animation-delay: 0.76s;
+}
+
+tbody tr:nth-child(5) {
+    animation-delay: 0.83s;
+}
+
+tbody tr:nth-child(6) {
+    animation-delay: 0.90s;
+}
+
+tbody tr:nth-child(7) {
+    animation-delay: 0.97s;
+}
+
+tbody tr:nth-child(8) {
+    animation-delay: 1.04s;
+}
+
+tbody tr:nth-child(9) {
+    animation-delay: 1.11s;
+}
+
+tbody tr:nth-child(10) {
+    animation-delay: 1.18s;
+}
 
 /* Hover Effect ให้แถวสว่างขึ้นเมื่อชี้ */
 tr:hover td {
@@ -294,6 +324,8 @@ td[colspan="100%"] {
     color: white;
     box-shadow: 0 4px 12px rgba(255, 126, 179, 0.3);
     height: 50px;
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
 .btn-search:hover {
@@ -303,6 +335,7 @@ td[colspan="100%"] {
 
 .btn-search:active {
     transform: translateY(-1px);
+
 }
 
 .btn-clear {
