@@ -92,30 +92,83 @@ document.addEventListener('change', function(e) {
 function addSelectedProducts() {
     var rows = document.querySelectorAll('.modal-table tbody tr');
     var selectedProducts = [];
+    var tableBody = document.getElementById('salePrBody');
 
     rows.forEach(function(row) {
         var checkbox = row.querySelector('.product-checkbox');
         var qtyInput = row.querySelector('.product-qty');
 
-        if (checkbox && checkbox.checked && qtyInput && parseInt(qtyInput.value) > 0) {
-            var cells = row.querySelectorAll('td');
-            selectedProducts.push({
-                id: checkbox.value,
-                name: cells[2] ? cells[2].textContent.trim() : '',
-                price: cells[3] ? cells[3].textContent.trim() : '',
-                brand: cells[4] ? cells[4].textContent.trim() : '',
-                quantity: parseInt(qtyInput.value)
-            });
+        if (checkbox && checkbox.checked && qtyInput && parseFloat(qtyInput.value) > 0) {
+            var productCode = checkbox.value;
+            // ค้นหาข้อมูลเต็มจาก allProducts
+            var fullProduct = allProducts.find(p => p['รหัส'] === productCode);
+            
+            if (fullProduct) {
+                var qty = parseFloat(qtyInput.value);
+                var price = parseFloat(fullProduct['ราคาขาย']) || 0;
+                var taxRateStr = (fullProduct['อัตราภาษีขาย'] || "0").toString().replace('%', '');
+                var taxRate = parseFloat(taxRateStr) || 0;
+                
+                var amount = qty * price;
+                var tax = amount * (taxRate / 100);
+                var total = amount + tax;
+
+                var productToAdd = {
+                    ...fullProduct,
+                    quantity: qty,
+                    amount: amount,
+                    tax: tax,
+                    total: total
+                };
+
+                selectedProducts.push(productToAdd);
+                pendingAdds.push(productToAdd);
+
+                // สร้างแถวใหม่ในตารางหลัก
+                var newRow = document.createElement('tr');
+                newRow.className = 'item pending-add';
+                newRow.setAttribute('data-product', productCode);
+                newRow.style.background = 'rgba(144, 238, 144, 0.2)'; // สีเขียวอ่อนสำหรับรายการใหม่
+                
+                // คอลัมน์ข้อมูล (ต้องตรงกับลำดับใน sale_pr.ejs)
+                // ["สินค้า", "ชื่อสินค้า", "จำนวน", "ราคาต่อหน่วย", "ภาษี", "จำนวนเงินรวม"]
+                var cols = [
+                    productCode,
+                    fullProduct['ชื่อ'] || '',
+                    qty,
+                    price.toLocaleString(),
+                    tax.toLocaleString(),
+                    total.toLocaleString()
+                ];
+
+                cols.forEach(function(text) {
+                    var td = document.createElement('td');
+                    td.textContent = text;
+                    newRow.appendChild(td);
+                });
+
+                // คอลัมน์ checkbox (สำหรับลบ)
+                var tdCheck = document.createElement('td');
+                tdCheck.style.textAlign = 'center';
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'item-checkbox';
+                cb.value = productCode;
+                tdCheck.appendChild(cb);
+                newRow.appendChild(tdCheck);
+
+                tableBody.appendChild(newRow);
+            }
         }
     });
 
     if (selectedProducts.length === 0) {
-        alert('กรุณาเลือกสินค้าและกำหนดจำนวน');
+        alert('กรุณาเลือกสินค้าและกำหนดจำนวน (มากกว่า 0)');
         return;
     }
 
-    console.log('สินค้าที่เลือก:', selectedProducts);
-    alert('เพิ่มสินค้า ' + selectedProducts.length + ' รายการสำเร็จ');
+    console.log('เพิ่มรายการชั่วคราว:', selectedProducts);
+    updateSelectedCount();
     closeModal();
 }
 

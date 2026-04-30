@@ -91,12 +91,12 @@ app.get("/edit_sale", async (req, res) => {
 
     try {
         const subSalesData = await getsheet(idToEdit, "sub_sales_pr");
-        const salesData = await getsheet(idToEdit, "sales_pr");
+        const salesData = await getsheet(idToEdit, "Sale_pr");
         const allProductsRaw = await getsheet(null, "product");
 
-        const saleHeaders = ["วันที่", "PIC", "ลูกค้า-ผู้ขาย", "ผู้สร้าง", "โทรศัพท์"];
+        const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "ผู้สร้าง", "โทรศัพท์", "Email", "เครดิต (วัน)"];
         const subSaleHeaders = ["สินค้า", "ชื่อสินค้า", "จำนวน", "ราคาต่อหน่วย", "ภาษี", "จำนวนเงินรวม"];
-        const productHeaders = ["รหัส", "ชื่อ", "ราคาขาย", "แบรนด์"];
+        const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาขาย", "แบรนด์", "อัตราภาษีขาย"];
 
         // ฟังก์ชันช่วยในการ map data
         const mapDataByHeaders = (rawData, headers) => {
@@ -148,7 +148,7 @@ app.get("/edit_sale", async (req, res) => {
 
 app.get("/sale_pr", async (req, res) => {
     try {
-        const data = await getsheet(null, "sales_pr");
+        const data = await getsheet(null, "Sale_pr");
         const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "ผู้สร้าง", "โทรศัพท์"];
 
         // รับค่าค้นหา
@@ -195,7 +195,7 @@ app.get("/delsale", async (req, res) => {
 
         // 1. หา Sheet IDs
         const spreadsheet = await sheetsWrite.spreadsheets.get({ spreadsheetId });
-        const salesPrSheet = spreadsheet.data.sheets.find(s => s.properties.title === "sales_pr");
+        const salesPrSheet = spreadsheet.data.sheets.find(s => s.properties.title === "Sale_pr");
         const subSalesPrSheet = spreadsheet.data.sheets.find(s => s.properties.title === "sub_sales_pr");
 
         if (!salesPrSheet || !subSalesPrSheet) {
@@ -205,7 +205,7 @@ app.get("/delsale", async (req, res) => {
         // 2. หาแถวที่ต้องลบใน sales_pr
         const salesPrRes = await sheetsWrite.spreadsheets.values.get({
             spreadsheetId,
-            range: "sales_pr!A:A",
+            range: "Sale_pr!A:A",
         });
         const salesPrRows = salesPrRes.data.values || [];
         const salesPrIndex = salesPrRows.findIndex(row => row[0] === idToDelete);
@@ -314,7 +314,7 @@ app.post("/api/delete_rows", async (req, res) => {
             const row = allRows[i];
             const rowId = (row[idColIndex] || "").toString().trim();
             const rowProduct = (row[productColIndex] || "").toString().trim();
-            
+
             if (rowId === id.trim() && productCodes.map(pc => pc.trim()).includes(rowProduct)) {
                 rowsToDelete.push(i);
             }
@@ -351,6 +351,211 @@ app.post("/api/delete_rows", async (req, res) => {
     }
 });
 
-app.listen(process.env.PORT || 4000, "0.0.0.0", () =>
-    console.log(`Server running on port ${process.env.PORT || 4000}`)
+// API เพิ่มสินค้าลงใน sub_sales_pr sheet
+app.post("/api/add_rows", async (req, res) => {
+    const { id, products } = req.body;
+    console.log('API /api/add_rows called with:', { id, productsCount: products ? products.length : 0 });
+
+    if (!id || !products || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({ error: "ต้องระบุ id และรายการสินค้า" });
+    }
+
+    try {
+        const sheetName = "sub_sales_pr";
+
+        // ข้อมูลที่ต้องการเขียนลง sheet ตามลำดับ header
+        // ['id', 'สินค้า', 'ชื่อสินค้า', 'ข้อมูลจำเพราะ', 'จำนวน', 'หน่วย', 'ราคาต่อหน่วย', 'จำนวนเงิน', 'ภาษี', 'จำนวนเงินรวม']
+        const values = products.map(p => {
+            const qty = parseFloat(p.quantity) || 0;
+            const price = parseFloat(p['ราคาขาย']) || 0;
+            const taxRateStr = (p['อัตราภาษีขาย'] || "0").toString().replace('%', '');
+            const taxRate = parseFloat(taxRateStr) || 0;
+
+            const amount = qty * price;
+            const tax = amount * (taxRate / 100);
+            const total = amount + tax;
+
+            return [
+                id,                  // id
+                p.รหัส || "",         // สินค้า
+                p.ชื่อ || "",         // ชื่อสินค้า
+                p.ชื่อจำเพราะ || "",   // ข้อมูลจำเพราะ
+                qty,                 // จำนวน
+                p.หน่วย || "",        // หน่วย
+                price,               // ราคาต่อหน่วย
+                amount,              // จำนวนเงิน
+                tax,                 // ภาษี
+                total                // จำนวนเงินรวม
+            ];
+        });
+
+        await sheetsWrite.spreadsheets.values.append({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A:J`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+                values: values
+            }
+        });
+
+        console.log(`เพิ่ม ${products.length} รายการลงใน ${sheetName} สำเร็จ`);
+        res.json({ success: true, added: products.length });
+    } catch (err) {
+        console.error("Error adding rows:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API บันทึกการเปลี่ยนแปลงทั้งหมด (ทั้งเพิ่มและลบ)
+app.post("/api/save_changes", async (req, res) => {
+    const { id, deletes, adds } = req.body;
+    console.log('API /api/save_changes called for ID:', id, 'Deletes:', deletes?.length, 'Adds:', adds?.length);
+
+    if (!id) {
+        return res.status(400).json({ error: "ต้องระบุ id" });
+    }
+
+    try {
+        const sheetName = "sub_sales_pr";
+        let deletedCount = 0;
+        let addedCount = 0;
+
+        // 1. จัดการการลบ (Deletes)
+        if (deletes && Array.isArray(deletes) && deletes.length > 0) {
+            const result = await sheetsWrite.spreadsheets.values.get({
+                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                range: `${sheetName}!A1:Z`,
+            });
+
+            const allRows = result.data.values ?? [];
+            if (allRows.length > 0) {
+                const headers = allRows[0];
+                const idColIndex = headers.indexOf("id");
+                const productColIndex = headers.indexOf("สินค้า");
+
+                if (idColIndex !== -1 && productColIndex !== -1) {
+                    const spreadsheet = await sheetsWrite.spreadsheets.get({
+                        spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                    });
+                    const sheetMeta = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
+                    const sheetId = sheetMeta.properties.sheetId;
+
+                    const rowsToDelete = [];
+                    for (let i = 1; i < allRows.length; i++) {
+                        const row = allRows[i];
+                        const rowId = (row[idColIndex] || "").toString().trim();
+                        const rowProduct = (row[productColIndex] || "").toString().trim();
+
+                        if (rowId === id.trim() && deletes.map(d => d.trim()).includes(rowProduct)) {
+                            rowsToDelete.push(i);
+                        }
+                    }
+
+                    if (rowsToDelete.length > 0) {
+                        rowsToDelete.sort((a, b) => b - a);
+                        const requests = rowsToDelete.map((rowIndex) => ({
+                            deleteDimension: {
+                                range: {
+                                    sheetId: sheetId,
+                                    dimension: "ROWS",
+                                    startIndex: rowIndex,
+                                    endIndex: rowIndex + 1,
+                                },
+                            },
+                        }));
+
+                        await sheetsWrite.spreadsheets.batchUpdate({
+                            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                            requestBody: { requests },
+                        });
+                        deletedCount = rowsToDelete.length;
+                    }
+                }
+            }
+        }
+
+        // 2. จัดการการเพิ่ม (Adds)
+        if (adds && Array.isArray(adds) && adds.length > 0) {
+            const values = adds.map(p => {
+                const qty = parseFloat(p.quantity) || 0;
+                const price = parseFloat(p['ราคาขาย']) || 0;
+                const taxRateStr = (p['อัตราภาษีขาย'] || "0").toString().replace('%', '');
+                const taxRate = parseFloat(taxRateStr) || 0;
+
+                const amount = qty * price;
+                const tax = amount * (taxRate / 100);
+                const total = amount + tax;
+
+                return [
+                    id,                  // id
+                    p['รหัส'] || "",      // สินค้า
+                    p['ชื่อ'] || "",      // ชื่อสินค้า
+                    p['ชื่อจำเพราะ'] || "", // ข้อมูลจำเพราะ
+                    qty,                 // จำนวน
+                    p['หน่วย'] || "",     // หน่วย
+                    price,               // ราคาต่อหน่วย
+                    amount,              // จำนวนเงิน
+                    tax,                 // ภาษี
+                    total                // จำนวนเงินรวม
+                ];
+            });
+
+            await sheetsWrite.spreadsheets.values.append({
+                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                range: `${sheetName}!A:J`,
+                valueInputOption: "USER_ENTERED",
+                requestBody: { values }
+            });
+            addedCount = adds.length;
+        }
+
+        console.log(`บันทึกการเปลี่ยนแปลงสำเร็จ: ลบ ${deletedCount}, เพิ่ม ${addedCount}`);
+        res.json({ success: true, deleted: deletedCount, added: addedCount });
+
+    } catch (err) {
+        console.error("Error saving changes:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/generate-pdf', async (req, res) => {
+    try {
+        console.log('Proxying request to generate-pdf...');
+        const response = await fetch('http://185.84.161.60:4000/api/generate-pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(req.body)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`External API Error Body:`, errorText);
+            throw new Error(`External API returned status: ${response.status} - ${errorText}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            return res.json(data);
+        } else {
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            if (contentType) {
+                res.setHeader('Content-Type', contentType);
+            } else {
+                res.setHeader('Content-Type', 'application/pdf');
+            }
+            // Let the frontend handle the blob downloading
+            return res.send(buffer);
+        }
+    } catch (error) {
+        console.error('Error in proxy /api/generate-pdf:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.listen(process.env.PORT || 5000, "0.0.0.0", () =>
+    console.log(`Server running on port ${process.env.PORT || 5000}`)
 );
