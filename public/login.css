@@ -1,0 +1,117 @@
+body {
+    font-family: 'Kanit', sans-serif;
+    background-color: #1a1a2e;
+    color: #ffffff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.login-container {
+    background-color: #16213e;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.login-logo {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #e94560;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.login-subtitle {
+    font-size: 0.9rem;
+    color: #a0a0b5;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: #e0e0e0;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    background-color: #0f3460;
+    border: 1px solid #2a4d80;
+    border-radius: 8px;
+    color: #ffffff;
+    font-family: 'Kanit', sans-serif;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #e94560;
+    box-shadow: 0 0 8px rgba(233, 69, 96, 0.4);
+}
+
+.btn-login {
+    width: 100%;
+    padding: 12px;
+    background-color: #e94560;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 10px;
+}
+
+.btn-login:hover {
+    background-color: #ff5c77;
+}
+
+.error-message {
+    background-color: rgba(233, 69, 96, 0.2);
+    color: #ff6b81;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(233, 69, 96, 0.4);
+}
+
+.input-icon {
+    position: relative;
+}
+
+.input-icon i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0a0b5;
+}
+
+.input-icon input {
+    padding-left: 45px;
+}

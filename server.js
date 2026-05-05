@@ -11,6 +11,14 @@ app.set('view engine', 'ejs');
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+const session = require("express-session");
+app.use(session({
+    secret: 'erp-secret-key-2026',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false } // Set true if using HTTPS
+}));
 
 // ส่ง baseUrl ไปทุก view อัตโนมัติ
 app.use((req, res, next) => {
@@ -27,6 +35,73 @@ const authWrite = new google.auth.GoogleAuth({
 });
 const sheets = google.sheets({ version: "v4", auth: authReadonly });
 const sheetsWrite = google.sheets({ version: "v4", auth: authWrite });
+
+async function getsheet(id, table) {
+    try {
+        const result = await sheets.spreadsheets.values.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${table}!A1:Z`,
+        });
+
+        const [headers, ...rows] = result.data.values ?? [];
+        if (!headers) return [];
+
+        let data = rows.map((row) =>
+            Object.fromEntries(headers.map((h, i) => [h, row[i] ?? ""]))
+        );
+
+        if (id) {
+            data = data.filter((row) => row["id"] === id);
+        }
+
+        return data;
+    } catch (err) {
+        console.error("Error fetching sheet:", err.message);
+        return [];
+    }
+}
+
+// Login Routes
+app.get('/login', (req, res) => {
+    if (req.session && req.session.user) return res.redirect('/');
+    res.render('login', { error: null });
+});
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const employees = await getsheet(null, 'empolyee');
+        const user = employees.find(e => e['ชื่อภาษาอังกฤษpic'] === username && e['password'] === password);
+        
+        if (user) {
+            req.session.user = user;
+            return res.redirect('/');
+        } else {
+            return res.render('login', { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+        }
+    } catch (err) {
+        console.error("Login error:", err);
+        return res.render('login', { error: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล' });
+    }
+});
+
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/login');
+});
+
+// Middleware ตรวจสอบการ Login
+const requireLogin = (req, res, next) => {
+    if (req.session && req.session.user) {
+        res.locals.user = req.session.user; // ส่งข้อมูลพนักงานไปที่ view
+        next();
+    } else {
+        res.redirect('/login');
+    }
+};
+
+// --- ป้องกันทุก Route ด้านล่างนี้ ต้อง Login ก่อน ---
+app.use(requireLogin);
 
 app.get("/api/sheets", async (req, res) => {
     try {
@@ -57,31 +132,6 @@ app.get('/', (req, res) => {
     });
 });
 
-async function getsheet(id, table) {
-    try {
-        const result = await sheets.spreadsheets.values.get({
-            spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: `${table}!A1:Z`,
-        });
-
-        const [headers, ...rows] = result.data.values ?? [];
-        if (!headers) return [];
-
-        let data = rows.map((row) =>
-            Object.fromEntries(headers.map((h, i) => [h, row[i] ?? ""]))
-        );
-
-        // ถ้า id เป็น null จะไม่ filter
-        if (id) {
-            data = data.filter((row) => row["id"] === id);
-        }
-
-        return data;
-    } catch (err) {
-        console.error("Error fetching sheet:", err.message);
-        return [];
-    }
-}
 
 app.get("/edit_sale", async (req, res) => {
     const idToEdit = req.query.id;
@@ -94,7 +144,7 @@ app.get("/edit_sale", async (req, res) => {
         const salesData = await getsheet(idToEdit, "Sale_pr");
         const allProductsRaw = await getsheet(null, "product");
 
-        const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "ผู้สร้าง", "โทรศัพท์", "Email", "เครดิต (วัน)"];
+        const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "กำหนดการยืนราคา"];
         const subSaleHeaders = ["สินค้า", "ชื่อสินค้า", "จำนวน", "ราคาต่อหน่วย", "ภาษี", "จำนวนเงินรวม"];
         const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาขาย", "แบรนด์", "อัตราภาษีขาย"];
 
@@ -136,6 +186,7 @@ app.get("/edit_sale", async (req, res) => {
             data: subSalesData,
             sale_pr: salePrData,
             order: orderData,
+            rawSalesData: salesData,
             allProducts: allProducts,
             search: req.query.search || "",
             idToEdit: idToEdit
@@ -149,7 +200,7 @@ app.get("/edit_sale", async (req, res) => {
 app.get("/sale_pr", async (req, res) => {
     try {
         const data = await getsheet(null, "Sale_pr");
-        const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "ผู้สร้าง", "โทรศัพท์"];
+        const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์"];
 
         // รับค่าค้นหา
         const searchQuery = (req.query.search || "").trim().toLowerCase();
@@ -517,10 +568,75 @@ app.post("/api/save_changes", async (req, res) => {
     }
 });
 
+// API อัปเดตข้อมูล Order
+app.post("/api/update_order", async (req, res) => {
+    const { id, updatedData } = req.body;
+    console.log('API /api/update_order called for ID:', id);
+
+    if (!id || !updatedData) {
+        return res.status(400).json({ error: "ต้องระบุ id และข้อมูลที่ต้องการอัปเดต" });
+    }
+
+    try {
+        const sheetName = "Sale_pr";
+
+        const result = await sheetsWrite.spreadsheets.values.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A1:Z`,
+        });
+
+        const allRows = result.data.values ?? [];
+        if (allRows.length === 0) return res.status(404).json({ error: "ไม่พบข้อมูลใน Sheet" });
+
+        const headers = allRows[0];
+        const idColIndex = headers.indexOf("id");
+        if (idColIndex === -1) return res.status(500).json({ error: "ไม่พบคอลัมน์ id" });
+
+        let rowIndex = -1;
+        for (let i = 1; i < allRows.length; i++) {
+            if ((allRows[i][idColIndex] || "").toString().trim() === id.trim()) {
+                rowIndex = i;
+                break;
+            }
+        }
+
+        if (rowIndex === -1) return res.status(404).json({ error: "ไม่พบข้อมูล Order นี้" });
+
+        const currentRow = allRows[rowIndex];
+        const newRow = [];
+
+        for (let j = 0; j < headers.length; j++) {
+            const header = headers[j];
+            if (updatedData.hasOwnProperty(header)) {
+                newRow[j] = updatedData[header];
+            } else {
+                newRow[j] = currentRow[j] !== undefined ? currentRow[j] : "";
+            }
+        }
+
+        // อัปเดตลง Google Sheets เริ่มต้นที่คอลัมน์ A ของแถวนั้น
+        await sheetsWrite.spreadsheets.values.update({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A${rowIndex + 1}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+                values: [newRow],
+            },
+        });
+
+        console.log(`อัปเดตข้อมูล Order ID: ${id} สำเร็จ`);
+        res.json({ success: true, message: "อัปเดตข้อมูลสำเร็จ" });
+
+    } catch (err) {
+        console.error("Error updating order:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/generate-pdf', async (req, res) => {
     try {
         console.log('Proxying request to generate-pdf...');
-        const response = await fetch('http://185.84.161.60:4000/api/generate-pdf', {
+        const response = await fetch('https://pdf.thanadon.click/api/generate-pdf', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

@@ -1,0 +1,64 @@
+<style>
+    .order-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        padding: 10px;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .order-form-group {
+        display: flex;
+        flex-direction: column;
+        text-align: left;
+    }
+
+    .order-form-group label {
+        font-weight: 500;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+        color: #ddd;
+        /* Match the dark theme */
+    }
+
+    .order-form-group input {
+        padding: 8px;
+        border: 1px solid #444;
+        border-radius: 4px;
+        font-family: inherit;
+        background-color: #2a2a2a;
+        color: #fff;
+    }
+
+    .order-form-group input:read-only {
+        background-color: #1a1a1a;
+        color: #888;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 600px) {
+        .order-form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div id="orderModal" class="modal-overlay" style="display: none; z-index: 1000;">
+    <div class="modal-panel" style="max-width: 800px;">
+        <div class="modal-header">
+            <h2>แก้ไขข้อมูลการเสนอขาย</h2>
+        </div>
+
+        <div class="modal-body">
+            <div class="order-form-grid" id="orderFormGrid">
+                <!-- Inputs injected via JS -->
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeOrderModal()">ยกเลิก</button>
+            <button class="btn-confirm" id="btnSaveOrder" onclick="saveOrderDetails()">บันทึก</button>
+        </div>
+    </div>
+</div>

@@ -412,3 +412,10 @@ td[colspan="100%"] {
         padding: 12px 16px;
     }
 }
+
+a i {
+    border: none;
+    padding: 12px 16px;
+    cursor: pointer;
+    color: white;
+}

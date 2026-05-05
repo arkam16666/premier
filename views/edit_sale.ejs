@@ -28,6 +28,15 @@
             <a href="#">เสนอซื้อ</a>
             <a href="#">คลังสินค้า</a>
         </nav>
+        <div style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="color: #a0a0b5; margin-bottom: 10px; font-size: 0.9rem;">
+                <i class="fas fa-user-circle"></i>
+                <%= (typeof user !=='undefined' && user) ? user['ชื่อภาษาอังกฤษpic'] : 'Unknown' %>
+            </div>
+            <a href="<%= baseUrl %>/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+            </a>
+        </div>
     </aside>
     <main style="padding: 20px;">
 
@@ -63,8 +72,8 @@
                                                 </td>
                                                 <% }) %>
                                                     <td style="text-align: center;">
-                                                        <a href="/edit_sale?id=<%= row['id'] %>">
-                                                            <i class="fas fa-pencil"></i>
+                                                        <a href="#" onclick="openOrderModal(event)">
+                                                            <i class="fas fa-pencil"> </i>
                                                         </a>
                                                     </td>
                                         </tr>
@@ -142,9 +151,10 @@
 
                             <script>
                                 // ข้อมูลพื้นฐานที่จำเป็นสำหรับ Modal และการบันทึก
-                                var allProducts = <% - JSON.stringify(allProducts || []) %>;
-                                var rawSubSalesData = <% - JSON.stringify(data || []) %>;
-                                var rawOrderData = <% - JSON.stringify(order || []) %>;
+                                var allProducts = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(allProducts || [])) %>'));
+                                var rawSubSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
+                                var rawOrderData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(order || [])) %>'));
+                                var rawSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawSalesData || [])) %>'));
                                 var currentEditId = '<%= idToEdit %>';
                                 var pendingDeletes = [];
                                 var pendingAdds = [];
@@ -156,186 +166,274 @@
     </main>
 
     <%- include('modal.ejs') %>
-        <script>
-            // ย้ายข้อมูลมาไว้ที่นี่เพื่อให้เข้าถึงได้แน่นอน
-            console.log('Page loaded for ID:', currentEditId);
-            console.log('Total products loaded:', allProducts.length);
+        <%- include('order_modal.ejs') %>
+            <script>
+                // ย้ายข้อมูลมาไว้ที่นี่เพื่อให้เข้าถึงได้แน่นอน
+                console.log('Page loaded for ID:', currentEditId);
+                console.log('Total products loaded:', allProducts.length);
 
-            function printPDF() {
-                var btn = document.getElementById('btnprint');
-                var originalText = btn.innerText;
-                btn.innerText = 'กำลังพิมพ์...';
-                btn.disabled = true;
+                function printPDF() {
+                    var btn = document.getElementById('btnprint');
+                    var originalText = btn.innerText;
+                    btn.innerText = 'กำลังพิมพ์...';
+                    btn.disabled = true;
 
-                var grandTotal = 0;
-                var totalVat = 0;
-                var items = rawSubSalesData.map(function (item) {
-                    var qty = parseFloat(item["จำนวน"]) || 0;
-                    var unitPrice = parseFloat(item["ราคาต่อหน่วย"]) || 0;
-                    var total = parseFloat(item["จำนวนเงินรวม"]) || 0;
-                    var vatbuy = parseFloat(item["ภาษี"]) || 0;
-                    grandTotal += total;
-                    totalVat += vatbuy;
+                    var grandTotal = 0;
+                    var totalVat = 0;
+                    var items = rawSubSalesData.map(function (item) {
+                        var qty = parseFloat(item["จำนวน"]) || 0;
+                        var unitPrice = parseFloat(item["ราคาต่อหน่วย"]) || 0;
+                        var total = parseFloat(item["จำนวนเงินรวม"]) || 0;
+                        var vatbuy = parseFloat(item["ภาษี"]) || 0;
+                        grandTotal += total;
+                        totalVat += vatbuy;
 
-                    return {
-                        "productName": item["ชื่อสินค้า"] || "",
-                        "sku": item["สินค้า"] || "",
-                        "qty": qty,
-                        "unitPrice": unitPrice,
-                        "total": total,
-                        "หน่วย": item["หน่วย"] || "",
-                        "vatbuy": vatbuy,
-                        "vatshell": 0,
-                        "ข้อมูลจำเพราะ": item["ข้อมูลจำเพราะ"] || ""
-                    };
-                });
-
-                var payload = {
-                    "items": [
-                        {
-                            "id": currentEditId,
-                            "orderDate": rawOrderData.length > 0 ? (rawOrderData[0]["วันที่"] || "") : "",
-                            "customerName": rawOrderData.length > 0 ? (rawOrderData[0]["ลูกค้า-ผู้ขาย"] || "") : "",
-                            "sellerName": rawOrderData.length > 0 ? (rawOrderData[0]["ผู้สร้าง"] || "") : "",
-                            "note": "",
-                            "email": "as_auto@live.com",
-                            "company": "",
-                            "attn": " ",
-                            "payment_term": "",
-                            "items": items,
-                            "grandTotal": grandTotal,
-                            "vat": totalVat
-                        }
-                    ]
-                };
-
-                fetch('/api/generate-pdf', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-                    .then(function (response) {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        var contentType = response.headers.get('content-type');
-                        if (contentType && contentType.includes('application/json')) {
-                            return response.json().then(function (data) {
-                                if (data.url) {
-                                    window.open(data.url, '_blank');
-                                } else {
-                                    alert('สร้าง PDF สำเร็จ แต่ไม่พบ URL');
-                                }
-                            });
-                        } else {
-                            return response.blob().then(function (blob) {
-                                var url = window.URL.createObjectURL(blob);
-                                var a = document.createElement('a');
-                                a.href = url;
-                                a.download = 'document_' + currentEditId + '.pdf';
-                                document.body.appendChild(a);
-                                a.click();
-                                a.remove();
-                                window.URL.revokeObjectURL(url);
-                            });
-                        }
-                    })
-                    .catch(function (error) {
-                        console.error('Error generating PDF:', error);
-                        alert('เกิดข้อผิดพลาดในการสร้าง PDF');
-                    })
-                    .finally(function () {
-                        btn.innerText = originalText;
-                        btn.disabled = false;
+                        return {
+                            "productName": item["ชื่อสินค้า"] || "",
+                            "sku": item["สินค้า"] || "",
+                            "qty": qty,
+                            "unitPrice": unitPrice,
+                            "total": total,
+                            "หน่วย": item["หน่วย"] || "",
+                            "vatbuy": vatbuy,
+                            "vatshell": 0,
+                            "ข้อมูลจำเพราะ": item["ข้อมูลจำเพราะ"] || ""
+                        };
                     });
-            }
 
-            // ปุ่มลบ: ซ่อนแถวที่ติ๊กเลือกออกจากหน้าจอ + เก็บไว้ใน pendingDeletes
-            function softDelete() {
-                var checkboxes = document.querySelectorAll('.item-checkbox:checked');
-                if (checkboxes.length === 0) {
-                    alert('กรุณาเลือกรายการที่ต้องการลบ');
-                    return;
+                    var payload = {
+                        "items": [
+                            {
+                                "id": currentEditId,
+                                "orderDate": rawOrderData.length > 0 ? (rawOrderData[0]["วันที่"] || "") : "",
+                                "customerName": rawOrderData.length > 0 ? (rawOrderData[0]["ลูกค้า-ผู้ขาย"] || "") : "",
+                                "sellerName": rawOrderData.length > 0 ? (rawOrderData[0]["ผู้สร้าง"] || "") : "",
+                                "note": "",
+                                "email": "as_auto@live.com",
+                                "company": "",
+                                "attn": " ",
+                                "payment_term": "",
+                                "items": items,
+                                "grandTotal": grandTotal,
+                                "vat": totalVat
+                            }
+                        ]
+                    };
+
+                    fetch('/api/generate-pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            var contentType = response.headers.get('content-type');
+                            if (contentType && contentType.includes('application/json')) {
+                                return response.json().then(function (data) {
+                                    if (data.url) {
+                                        window.open(data.url, '_blank');
+                                    } else {
+                                        alert('สร้าง PDF สำเร็จ แต่ไม่พบ URL');
+                                    }
+                                });
+                            } else {
+                                return response.blob().then(function (blob) {
+                                    var url = window.URL.createObjectURL(blob);
+                                    var a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = 'document_' + currentEditId + '.pdf';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                    window.URL.revokeObjectURL(url);
+                                });
+                            }
+                        })
+                        .catch(function (error) {
+                            console.error('Error generating PDF:', error);
+                            alert('เกิดข้อผิดพลาดในการสร้าง PDF');
+                        })
+                        .finally(function () {
+                            btn.innerText = originalText;
+                            btn.disabled = false;
+                        });
                 }
 
-                checkboxes.forEach(function (cb) {
-                    var row = cb.closest('tr');
-                    var productCode = row.getAttribute('data-product');
-
-                    // ถ้าเป็นรายการที่พึ่งกดเพิ่มมา (ยังไม่ได้ลง sheet) ให้เอาออกจาก pendingAdds
-                    if (row.classList.contains('pending-add')) {
-                        pendingAdds = pendingAdds.filter(p => p['รหัส'] !== productCode);
-                        row.remove();
+                // ปุ่มลบ: ซ่อนแถวที่ติ๊กเลือกออกจากหน้าจอ + เก็บไว้ใน pendingDeletes
+                function softDelete() {
+                    var checkboxes = document.querySelectorAll('.item-checkbox:checked');
+                    if (checkboxes.length === 0) {
+                        alert('กรุณาเลือกรายการที่ต้องการลบ');
                         return;
                     }
 
-                    // ถ้าเป็นรายการเดิมที่มีอยู่แล้ว ให้เพิ่มเข้า pendingDeletes
-                    if (pendingDeletes.indexOf(productCode) === -1) {
-                        pendingDeletes.push(productCode);
-                    }
+                    checkboxes.forEach(function (cb) {
+                        var row = cb.closest('tr');
+                        var productCode = row.getAttribute('data-product');
 
-                    row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                    row.style.opacity = '0';
-                    row.style.transform = 'translateX(-20px)';
-                    setTimeout(function () {
-                        row.style.display = 'none';
-                    }, 300);
-
-                    cb.checked = false;
-                });
-
-                console.log('รอลบ:', pendingDeletes);
-                console.log('รอเพิ่ม:', pendingAdds);
-            }
-
-            // ปุ่มยืนยัน: บันทึกการเปลี่ยนแปลงทั้งหมด (ทั้งเพิ่มและลบ) ลง Google Sheet
-            function saveChanges() {
-                console.log('saveChanges called. Deletes:', pendingDeletes, 'Adds:', pendingAdds);
-
-                if (pendingDeletes.length === 0 && pendingAdds.length === 0) {
-                    alert('ไม่มีรายการที่เปลี่ยนแปลง');
-                    return;
-                }
-
-                if (!confirm('ยืนยันการบันทึกการเปลี่ยนแปลงทั้งหมด?')) {
-                    return;
-                }
-
-                var btn = document.getElementById('btnSaveChanges');
-                var originalText = btn.innerText;
-                btn.innerText = 'กำลังบันทึก...';
-                btn.disabled = true;
-
-                fetch('/api/save_changes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: currentEditId,
-                        deletes: pendingDeletes,
-                        adds: pendingAdds
-                    })
-                })
-                    .then(function (response) { return response.json(); })
-                    .then(function (data) {
-                        if (data.error) {
-                            alert('เกิดข้อผิดพลาด: ' + data.error);
-                            btn.innerText = originalText;
-                            btn.disabled = false;
+                        // ถ้าเป็นรายการที่พึ่งกดเพิ่มมา (ยังไม่ได้ลง sheet) ให้เอาออกจาก pendingAdds
+                        if (row.classList.contains('pending-add')) {
+                            pendingAdds = pendingAdds.filter(p => p['รหัส'] !== productCode);
+                            row.remove();
                             return;
                         }
-                        alert('บันทึกสำเร็จ (ลบ: ' + (data.deleted || 0) + ', เพิ่ม: ' + (data.added || 0) + ')');
-                        pendingDeletes = [];
-                        pendingAdds = [];
-                        window.location.reload();
-                    })
-                    .catch(function (err) {
-                        console.error('Save error:', err);
-                        alert('เกิดข้อผิดพลาด: ' + err.message);
-                        btn.innerText = originalText;
-                        btn.disabled = false;
+
+                        // ถ้าเป็นรายการเดิมที่มีอยู่แล้ว ให้เพิ่มเข้า pendingDeletes
+                        if (pendingDeletes.indexOf(productCode) === -1) {
+                            pendingDeletes.push(productCode);
+                        }
+
+                        row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'translateX(-20px)';
+                        setTimeout(function () {
+                            row.style.display = 'none';
+                        }, 300);
+
+                        cb.checked = false;
                     });
-            }
-        </script>
+
+                    console.log('รอลบ:', pendingDeletes);
+                    console.log('รอเพิ่ม:', pendingAdds);
+                }
+
+                // ปุ่มยืนยัน: บันทึกการเปลี่ยนแปลงทั้งหมด (ทั้งเพิ่มและลบ) ลง Google Sheet
+                function saveChanges() {
+                    console.log('saveChanges called. Deletes:', pendingDeletes, 'Adds:', pendingAdds);
+
+                    if (pendingDeletes.length === 0 && pendingAdds.length === 0) {
+                        alert('ไม่มีรายการที่เปลี่ยนแปลง');
+                        return;
+                    }
+
+                    if (!confirm('ยืนยันการบันทึกการเปลี่ยนแปลงทั้งหมด?')) {
+                        return;
+                    }
+
+                    var btn = document.getElementById('btnSaveChanges');
+                    var originalText = btn.innerText;
+                    btn.innerText = 'กำลังบันทึก...';
+                    btn.disabled = true;
+
+                    fetch('/api/save_changes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: currentEditId,
+                            deletes: pendingDeletes,
+                            adds: pendingAdds
+                        })
+                    })
+                        .then(function (response) { return response.json(); })
+                        .then(function (data) {
+                            if (data.error) {
+                                alert('เกิดข้อผิดพลาด: ' + data.error);
+                                btn.innerText = originalText;
+                                btn.disabled = false;
+                                return;
+                            }
+                            alert('บันทึกสำเร็จ (ลบ: ' + (data.deleted || 0) + ', เพิ่ม: ' + (data.added || 0) + ')');
+                            pendingDeletes = [];
+                            pendingAdds = [];
+                            window.location.reload();
+                        })
+                        .catch(function (err) {
+                            console.error('Save error:', err);
+                            alert('เกิดข้อผิดพลาด: ' + err.message);
+                            btn.innerText = originalText;
+                            btn.disabled = false;
+                        });
+                }
+
+                // --- Logic สำหรับ Order Modal ---
+                const readOnlyFields = ["id", "วันที่สร้าง", "ผู้สร้าง", "ผู้แก้ไขล่าสุด", "วันที่สร้าง", "วันที่แก้ไขล่าสุด", "สถานะเอกสาร", "PIC", "วันที่"]; // ตั้งให้ห้ามแก้ id และวันที่สร้าง
+
+                function openOrderModal(e) {
+                    if (e) e.preventDefault();
+                    const grid = document.getElementById('orderFormGrid');
+                    grid.innerHTML = '';
+
+                    // ใช้ rawSalesData แทน rawOrderData เพื่อดึงคอลัมน์ทั้งหมดจากชีตจริง
+                    const currentData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+                    const orderFields = Object.keys(currentData);
+
+                    orderFields.forEach(field => {
+                        const val = currentData[field] || '';
+                        const isReadOnly = readOnlyFields.includes(field);
+
+                        const group = document.createElement('div');
+                        group.className = 'order-form-group';
+
+                        const label = document.createElement('label');
+                        label.innerText = field;
+
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.id = 'edit_order_' + field;
+                        input.value = val;
+                        if (isReadOnly) {
+                            input.readOnly = true;
+                        }
+
+                        group.appendChild(label);
+                        group.appendChild(input);
+                        grid.appendChild(group);
+                    });
+
+                    document.getElementById('orderModal').style.display = 'flex';
+                }
+
+                function closeOrderModal() {
+                    document.getElementById('orderModal').style.display = 'none';
+                }
+
+                function saveOrderDetails() {
+                    const updatedData = {};
+                    orderFields.forEach(field => {
+                        const input = document.getElementById('edit_order_' + field);
+                        if (input && !input.readOnly) {
+                            updatedData[field] = input.value;
+                        }
+                    });
+
+                    if (!confirm('ยืนยันการบันทึกข้อมูล Order?')) {
+                        return;
+                    }
+
+                    const btn = document.getElementById('btnSaveOrder');
+                    const originalText = btn.innerText;
+                    btn.innerText = 'กำลังบันทึก...';
+                    btn.disabled = true;
+
+                    fetch('/api/update_order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: currentEditId,
+                            updatedData: updatedData
+                        })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.error) {
+                                alert('เกิดข้อผิดพลาด: ' + data.error);
+                                btn.innerText = originalText;
+                                btn.disabled = false;
+                                return;
+                            }
+                            alert('อัปเดตข้อมูล Order สำเร็จ');
+                            window.location.reload();
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            alert('เกิดข้อผิดพลาด: ' + err.message);
+                            btn.innerText = originalText;
+                            btn.disabled = false;
+                        });
+                }
+            </script>
 </body>
 
 </html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ | ระบบ ERP</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+
+    <div class="login-container">
+        <div class="login-logo">
+            <i class="fas fa-cube"></i> ERP System
+        </div>
+        <div class="login-subtitle">กรุณาเข้าสู่ระบบด้วยบัญชีพนักงาน</div>
+
+        <% if (error) { %>
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle"></i>
+                <%= error %>
+            </div>
+            <% } %>
+
+                <form action="/login" method="POST">
+                    <div class="form-group">
+                        <label for="username">ชื่อผู้ใช้ (ชื่อภาษาอังกฤษ PIC)</label>
+                        <div class="input-icon">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="username" name="username" placeholder="กรอกชื่อผู้ใช้ของคุณ" required
+                                autofocus>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">รหัสผ่าน</label>
+                        <div class="input-icon">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" name="password" placeholder="กรอกรหัสผ่านของคุณ"
+                                required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
+                </form>
+    </div>
+
+</body>
+
+</html>

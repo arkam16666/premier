@@ -11,6 +11,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="menubar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <title>Document</title>
 </head>
 
@@ -23,11 +24,22 @@
             </div>
 
             <nav class="menu">
-                <a href="#" class="active"><i class="icon-dashboard"></i> Dashboard</a>
+                <a href="<%= baseUrl %>/" class="active"><i class="icon-dashboard"></i> Dashboard</a>
                 <a href="<%= baseUrl %>/sale_pr"><i class="icon-sales"></i> เสนอขาย</a>
                 <a href="#"><i class="icon-inventory"></i> เสนอซื้อ</a>
                 <a href="#">คลังสินค้า</a>
             </nav>
+
+            <div
+                style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="color: #a0a0b5; margin-bottom: 10px; font-size: 0.9rem;">
+                    <i class="fas fa-user-circle"></i>
+                    <%= (typeof user !=='undefined' && user) ? user['ชื่อภาษาอังกฤษpic'] : 'Unknown' %>
+                </div>
+                <a href="<%= baseUrl %>/logout" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                </a>
+            </div>
         </aside>
 
         <main class="main-content">
