@@ -67,8 +67,8 @@
                 <% }) %>
 
                   <th style="text-align: center;">จัดการ</th>
-                  <th style="text-align: center;">ลบ</th>
                   <th style="text-align: center;">ยืนยัน</th>
+                  <th style="text-align: center;">ลบ</th>
                   <% } %>
           </tr>
         </thead>
@@ -122,25 +122,32 @@
       element.style.pointerEvents = 'none';
 
       try {
-        const response = await fetch('https://n8n.thanadon.click/webhook-test/8ee359f9-89a2-483c-adcc-7cf62c4682cb?id=' + encodeURIComponent(id), {
-          method: 'GET'
+        const response = await fetch('/api/confirm-webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id })
         });
 
-        if (response.ok) {
-          alert('ส่งข้อมูล ID: ' + id + ' ไปยัง Webhook สำเร็จ!');
-        } else {
-          const errorText = await response.text();
-          console.error("Webhook Error Response:", errorText);
+        const result = await response.json();
 
-          if (response.status === 404 && errorText.includes('is not registered')) {
-            alert('ส่งข้อมูลไม่สำเร็จ: Webhook ยังไม่พร้อมทำงาน (ถ้าเป็น Test Webhook บน n8n กรุณากดปุ่ม "Execute workflow" ก่อนทดสอบครับ)');
+        if (response.ok && result.success) {
+          if (result.webhookSuccess) {
+            alert('ส่งข้อมูล ID: ' + id + ' ไปยัง Webhook สำเร็จ!');
+          } else if (result.webhookError) {
+            if (result.webhookError.status === 404 && result.webhookError.message && result.webhookError.message.includes('is not registered')) {
+              alert('บันทึกข้อมูลสำเร็จ แต่ Webhook ยังไม่พร้อมทำงาน (ถ้าเป็น Test Webhook บน n8n กรุณากดปุ่ม "Execute workflow" ก่อนทดสอบครับ)');
+            } else {
+              alert('บันทึกข้อมูลสำเร็จ แต่ส่ง Webhook ไม่สำเร็จ (Status ' + result.webhookError.status + ')');
+            }
           } else {
-            alert('เกิดข้อผิดพลาดในการส่งข้อมูล (Status ' + response.status + ')');
+            alert('บันทึกข้อมูลสำเร็จ!');
           }
+        } else {
+          alert('เกิดข้อผิดพลาด: ' + (result.error || 'Unknown error'));
         }
       } catch (err) {
-        console.error('Webhook Error:', err);
-        alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับ Webhook');
+        console.error('Error:', err);
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
       } finally {
         element.innerHTML = originalHTML;
         element.style.pointerEvents = 'auto';

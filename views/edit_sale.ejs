@@ -158,6 +158,7 @@
                                 var currentEditId = '<%= idToEdit %>';
                                 var pendingDeletes = [];
                                 var pendingAdds = [];
+                                var pendingOrderChanges = null; // เก็บการแก้ไข Order ไว้ใน memory ก่อนกดยืนยัน
                             </script>
                             <script src="model.js"></script>
                             <button type="button" id="btnSoftDelete" onclick="softDelete()">ลบ</button>
@@ -299,11 +300,11 @@
                     console.log('รอเพิ่ม:', pendingAdds);
                 }
 
-                // ปุ่มยืนยัน: บันทึกการเปลี่ยนแปลงทั้งหมด (ทั้งเพิ่มและลบ) ลง Google Sheet
+                // ปุ่มยืนยัน: บันทึกการเปลี่ยนแปลงทั้งหมด (Order + เพิ่ม/ลบสินค้า) ลง Google Sheet
                 function saveChanges() {
-                    console.log('saveChanges called. Deletes:', pendingDeletes, 'Adds:', pendingAdds);
+                    console.log('saveChanges called. Deletes:', pendingDeletes, 'Adds:', pendingAdds, 'OrderChanges:', pendingOrderChanges);
 
-                    if (pendingDeletes.length === 0 && pendingAdds.length === 0) {
+                    if (pendingDeletes.length === 0 && pendingAdds.length === 0 && !pendingOrderChanges) {
                         alert('ไม่มีรายการที่เปลี่ยนแปลง');
                         return;
                     }
@@ -323,7 +324,8 @@
                         body: JSON.stringify({
                             id: currentEditId,
                             deletes: pendingDeletes,
-                            adds: pendingAdds
+                            adds: pendingAdds,
+                            orderChanges: pendingOrderChanges
                         })
                     })
                         .then(function (response) { return response.json(); })
@@ -334,9 +336,10 @@
                                 btn.disabled = false;
                                 return;
                             }
-                            alert('บันทึกสำเร็จ (ลบ: ' + (data.deleted || 0) + ', เพิ่ม: ' + (data.added || 0) + ')');
+                            alert('บันทึกสำเร็จ!');
                             pendingDeletes = [];
                             pendingAdds = [];
+                            pendingOrderChanges = null;
                             window.location.reload();
                         })
                         .catch(function (err) {
@@ -349,6 +352,7 @@
 
                 // --- Logic สำหรับ Order Modal ---
                 const readOnlyFields = ["id", "วันที่สร้าง", "ผู้สร้าง", "ผู้แก้ไขล่าสุด", "วันที่สร้าง", "วันที่แก้ไขล่าสุด", "สถานะเอกสาร", "PIC", "วันที่"]; // ตั้งให้ห้ามแก้ id และวันที่สร้าง
+                var orderFields = []; // ประกาศระดับ script เพื่อให้ saveOrderDetails เข้าถึงได้
 
                 function openOrderModal(e) {
                     if (e) e.preventDefault();
@@ -357,7 +361,7 @@
 
                     // ใช้ rawSalesData แทน rawOrderData เพื่อดึงคอลัมน์ทั้งหมดจากชีตจริง
                     const currentData = rawSalesData.length > 0 ? rawSalesData[0] : {};
-                    const orderFields = Object.keys(currentData);
+                    orderFields = Object.keys(currentData);
 
                     orderFields.forEach(field => {
                         const val = currentData[field] || '';
@@ -390,48 +394,46 @@
                 }
 
                 function saveOrderDetails() {
-                    const updatedData = {};
-                    orderFields.forEach(field => {
-                        const input = document.getElementById('edit_order_' + field);
+                    var updatedData = {};
+                    orderFields.forEach(function(field) {
+                        var input = document.getElementById('edit_order_' + field);
                         if (input && !input.readOnly) {
                             updatedData[field] = input.value;
                         }
                     });
 
-                    if (!confirm('ยืนยันการบันทึกข้อมูล Order?')) {
-                        return;
+                    // เก็บการเปลี่ยนแปลงไว้ใน memory เท่านั้น (ยังไม่บันทึกลง database)
+                    pendingOrderChanges = updatedData;
+
+                    // อัปเดต rawSalesData ใน memory เพื่อให้เปิด modal ครั้งถัดไปเห็นค่าใหม่
+                    if (rawSalesData.length > 0) {
+                        Object.keys(updatedData).forEach(function(key) {
+                            rawSalesData[0][key] = updatedData[key];
+                        });
+                    }
+                    if (rawOrderData.length > 0) {
+                        Object.keys(updatedData).forEach(function(key) {
+                            if (rawOrderData[0].hasOwnProperty(key)) {
+                                rawOrderData[0][key] = updatedData[key];
+                            }
+                        });
                     }
 
-                    const btn = document.getElementById('btnSaveOrder');
-                    const originalText = btn.innerText;
-                    btn.innerText = 'กำลังบันทึก...';
-                    btn.disabled = true;
+                    // อัปเดตตาราง Order ด้านบนให้แสดงค่าใหม่ทันที
+                    var orderBody = document.querySelector('.order');
+                    if (orderBody && rawOrderData.length > 0) {
+                        var row = orderBody.querySelector('tr');
+                        if (row) {
+                            var cells = row.querySelectorAll('td');
+                            var keys = Object.keys(rawOrderData[0]);
+                            keys.forEach(function(key, i) {
+                                if (cells[i]) cells[i].textContent = rawOrderData[0][key] || '';
+                            });
+                        }
+                    }
 
-                    fetch('/api/update_order', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: currentEditId,
-                            updatedData: updatedData
-                        })
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.error) {
-                                alert('เกิดข้อผิดพลาด: ' + data.error);
-                                btn.innerText = originalText;
-                                btn.disabled = false;
-                                return;
-                            }
-                            alert('อัปเดตข้อมูล Order สำเร็จ');
-                            window.location.reload();
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            alert('เกิดข้อผิดพลาด: ' + err.message);
-                            btn.innerText = originalText;
-                            btn.disabled = false;
-                        });
+                    closeOrderModal();
+                    alert('บันทึกแล้ว (กรุณากด "ยืนยัน" เพื่อบันทึกลงฐานข้อมูล)');
                 }
             </script>
 </body>

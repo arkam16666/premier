@@ -23,6 +23,7 @@ app.use(session({
 // ส่ง baseUrl ไปทุก view อัตโนมัติ
 app.use((req, res, next) => {
     res.locals.baseUrl = process.env.BASE_URL || '';
+    res.locals.webhookUrl = process.env.WEBHOOK_TEST_URL || '';
     next();
 });
 const authReadonly = new google.auth.GoogleAuth({
@@ -40,7 +41,7 @@ async function getsheet(id, table) {
     try {
         const result = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: `${table}!A1:Z`,
+            range: `${table}!A1:AZ`,
         });
 
         const [headers, ...rows] = result.data.values ?? [];
@@ -107,7 +108,7 @@ app.get("/api/sheets", async (req, res) => {
     try {
         const result = await sheets.spreadsheets.values.get({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: "product!A1:Z1000", // เปลี่ยนชื่อ sheet
+            range: "product!A1:AZ1000", // เปลี่ยนชื่อ sheet
         });
 
         const [headers, ...rows] = result.data.values ?? [];
@@ -332,7 +333,7 @@ app.post("/api/delete_rows", async (req, res) => {
         const sheetName = "sub_sales_pr";
         const result = await sheetsWrite.spreadsheets.values.get({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: `${sheetName}!A1:Z`,
+            range: `${sheetName}!A1:AZ`,
         });
 
         const allRows = result.data.values ?? [];
@@ -474,7 +475,7 @@ app.post("/api/save_changes", async (req, res) => {
         if (deletes && Array.isArray(deletes) && deletes.length > 0) {
             const result = await sheetsWrite.spreadsheets.values.get({
                 spreadsheetId: process.env.GOOGLE_SHEET_ID,
-                range: `${sheetName}!A1:Z`,
+                range: `${sheetName}!A1:AZ`,
             });
 
             const allRows = result.data.values ?? [];
@@ -560,6 +561,81 @@ app.post("/api/save_changes", async (req, res) => {
         }
 
         console.log(`บันทึกการเปลี่ยนแปลงสำเร็จ: ลบ ${deletedCount}, เพิ่ม ${addedCount}`);
+
+        // 3. อัปเดต Order + วันที่แก้ไขล่าสุด / ผู้แก้ไขล่าสุด ใน Sale_pr
+        try {
+            const saleSheetName = "Sale_pr";
+            const user = req.session.user;
+            const userName = user ? (user['ชื่อภาษาอังกฤษpic'] || 'Unknown') : 'Unknown';
+
+            const now = new Date();
+            const dateStr = now.toLocaleString('th-TH', {
+                timeZone: 'Asia/Bangkok',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+
+            const saleResult = await sheetsWrite.spreadsheets.values.get({
+                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                range: `${saleSheetName}!A1:AZ`,
+            });
+
+            const saleRows = saleResult.data.values ?? [];
+            if (saleRows.length > 0) {
+                const saleHeaders = saleRows[0];
+                const saleIdCol = saleHeaders.indexOf("id");
+                const saleDateCol = saleHeaders.indexOf("วันที่แก้ไขล่าสุด");
+                const saleEditorCol = saleHeaders.indexOf("ผู้แก้ไขล่าสุด");
+
+                if (saleIdCol !== -1) {
+                    let saleRowIndex = -1;
+                    for (let i = 1; i < saleRows.length; i++) {
+                        if ((saleRows[i][saleIdCol] || "").toString().trim() === id.trim()) {
+                            saleRowIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (saleRowIndex !== -1) {
+                        const saleRow = [...(saleRows[saleRowIndex] || [])];
+
+                        // ถ้ามี orderChanges → อัปเดตค่าที่เปลี่ยนลงแถว
+                        const orderChanges = req.body.orderChanges;
+                        if (orderChanges && typeof orderChanges === 'object') {
+                            for (let j = 0; j < saleHeaders.length; j++) {
+                                const header = saleHeaders[j];
+                                if (orderChanges.hasOwnProperty(header)) {
+                                    while (saleRow.length <= j) saleRow.push("");
+                                    saleRow[j] = orderChanges[header];
+                                }
+                            }
+                        }
+
+                        // อัปเดต วันที่แก้ไขล่าสุด / ผู้แก้ไขล่าสุด
+                        if (saleDateCol !== -1) {
+                            while (saleRow.length <= saleDateCol) saleRow.push("");
+                            saleRow[saleDateCol] = dateStr;
+                        }
+                        if (saleEditorCol !== -1) {
+                            while (saleRow.length <= saleEditorCol) saleRow.push("");
+                            saleRow[saleEditorCol] = userName;
+                        }
+
+                        await sheetsWrite.spreadsheets.values.update({
+                            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                            range: `${saleSheetName}!A${saleRowIndex + 1}`,
+                            valueInputOption: "USER_ENTERED",
+                            requestBody: { values: [saleRow] },
+                        });
+
+                        console.log(`อัปเดต Sale_pr สำเร็จ - ผู้แก้ไข: ${userName}, วันที่: ${dateStr}, orderChanges: ${orderChanges ? 'yes' : 'no'}`);
+                    }
+                }
+            }
+        } catch (updateErr) {
+            console.error("Error updating Sale_pr:", updateErr);
+        }
+
         res.json({ success: true, deleted: deletedCount, added: addedCount });
 
     } catch (err) {
@@ -582,7 +658,7 @@ app.post("/api/update_order", async (req, res) => {
 
         const result = await sheetsWrite.spreadsheets.values.get({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: `${sheetName}!A1:Z`,
+            range: `${sheetName}!A1:AZ`,
         });
 
         const allRows = result.data.values ?? [];
@@ -614,6 +690,27 @@ app.post("/api/update_order", async (req, res) => {
             }
         }
 
+        // อัปเดต วันที่แก้ไขล่าสุด / ผู้แก้ไขล่าสุด อัตโนมัติ
+        const user = req.session.user;
+        const userName = user ? (user['ชื่อภาษาอังกฤษpic'] || 'Unknown') : 'Unknown';
+        const now = new Date();
+        const dateStr = now.toLocaleString('th-TH', {
+            timeZone: 'Asia/Bangkok',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        const dateColIdx = headers.indexOf("วันที่แก้ไขล่าสุด");
+        const editorColIdx = headers.indexOf("ผู้แก้ไขล่าสุด");
+        if (dateColIdx !== -1) {
+            while (newRow.length <= dateColIdx) newRow.push("");
+            newRow[dateColIdx] = dateStr;
+        }
+        if (editorColIdx !== -1) {
+            while (newRow.length <= editorColIdx) newRow.push("");
+            newRow[editorColIdx] = userName;
+        }
+
         // อัปเดตลง Google Sheets เริ่มต้นที่คอลัมน์ A ของแถวนั้น
         await sheetsWrite.spreadsheets.values.update({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
@@ -624,7 +721,7 @@ app.post("/api/update_order", async (req, res) => {
             },
         });
 
-        console.log(`อัปเดตข้อมูล Order ID: ${id} สำเร็จ`);
+        console.log(`อัปเดตข้อมูล Order ID: ${id} สำเร็จ โดย ${userName} เวลา ${dateStr}`);
         res.json({ success: true, message: "อัปเดตข้อมูลสำเร็จ" });
 
     } catch (err) {
@@ -633,10 +730,140 @@ app.post("/api/update_order", async (req, res) => {
     }
 });
 
+// API ยืนยัน + อัปเดตวันที่แก้ไขล่าสุด / ผู้แก้ไขล่าสุด แล้วส่ง Webhook
+app.post("/api/confirm-webhook", async (req, res) => {
+    const { id } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ error: "ต้องระบุ id" });
+    }
+
+    try {
+        const sheetName = "Sale_pr";
+        const user = req.session.user;
+        const userName = user ? (user['ชื่อภาษาอังกฤษpic'] || 'Unknown') : 'Unknown';
+
+        // Format date/time in Thai timezone
+        const now = new Date();
+        const dateStr = now.toLocaleString('th-TH', {
+            timeZone: 'Asia/Bangkok',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        // 1. Read the entire sheet
+        const result = await sheetsWrite.spreadsheets.values.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A1:AZ`,
+        });
+
+        const allRows = result.data.values ?? [];
+        if (allRows.length === 0) {
+            return res.status(404).json({ error: "ไม่พบข้อมูลใน Sheet" });
+        }
+
+        const headers = [...allRows[0]];
+        const idColIndex = headers.indexOf("id");
+        if (idColIndex === -1) {
+            return res.status(500).json({ error: "ไม่พบคอลัมน์ id" });
+        }
+
+        // 2. Find the target row
+        let rowIndex = -1;
+        for (let i = 1; i < allRows.length; i++) {
+            if ((allRows[i][idColIndex] || "").toString().trim() === id.toString().trim()) {
+                rowIndex = i;
+                break;
+            }
+        }
+
+        if (rowIndex === -1) {
+            return res.status(404).json({ error: `ไม่พบข้อมูล ID: ${id}` });
+        }
+
+        // 3. Find or add header columns
+        let dateColIndex = headers.indexOf("วันที่แก้ไขล่าสุด");
+        let editorColIndex = headers.indexOf("ผู้แก้ไขล่าสุด");
+
+        let headersChanged = false;
+        if (dateColIndex === -1) {
+            dateColIndex = headers.length;
+            headers.push("วันที่แก้ไขล่าสุด");
+            headersChanged = true;
+        }
+        if (editorColIndex === -1) {
+            editorColIndex = headers.length;
+            headers.push("ผู้แก้ไขล่าสุด");
+            headersChanged = true;
+        }
+
+        // 4. Update headers if new columns were added
+        if (headersChanged) {
+            await sheetsWrite.spreadsheets.values.update({
+                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                range: `${sheetName}!A1`,
+                valueInputOption: "USER_ENTERED",
+                requestBody: { values: [headers] },
+            });
+        }
+
+        // 5. Update the target row
+        const currentRow = [...(allRows[rowIndex] || [])];
+        while (currentRow.length <= Math.max(dateColIndex, editorColIndex)) {
+            currentRow.push("");
+        }
+        currentRow[dateColIndex] = dateStr;
+        currentRow[editorColIndex] = userName;
+
+        await sheetsWrite.spreadsheets.values.update({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A${rowIndex + 1}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: { values: [currentRow] },
+        });
+
+        console.log(`ยืนยัน ID: ${id} โดย ${userName} เวลา ${dateStr}`);
+
+        // 6. Call the webhook
+        const webhookUrl = process.env.WEBHOOK_TEST_URL;
+        let webhookSuccess = false;
+        let webhookError = null;
+
+        if (webhookUrl) {
+            try {
+                const webhookResponse = await fetch(webhookUrl + '?id=' + encodeURIComponent(id), {
+                    method: 'GET'
+                });
+
+                if (webhookResponse.ok) {
+                    webhookSuccess = true;
+                } else {
+                    const errorText = await webhookResponse.text();
+                    webhookError = { status: webhookResponse.status, message: errorText };
+                }
+            } catch (webhookErr) {
+                webhookError = { status: 0, message: webhookErr.message };
+            }
+        }
+
+        res.json({
+            success: true,
+            sheetUpdated: true,
+            webhookSuccess,
+            webhookError
+        });
+
+    } catch (err) {
+        console.error("Error in confirm-webhook:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/generate-pdf', async (req, res) => {
     try {
         console.log('Proxying request to generate-pdf...');
-        const response = await fetch('https://pdf.thanadon.click/api/generate-pdf', {
+        const pdfApiUrl = process.env.PDF_API_URL || 'https://pdf.thanadon.click/api/generate-pdf';
+        const response = await fetch(pdfApiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
