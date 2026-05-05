@@ -181,7 +181,6 @@ app.get("/sale_pr", async (req, res) => {
     }
 });
 
-// เปลี่ยนจาก app.post เป็น app.get และลบ ?id ออกจาก path
 // ปรับปรุง /delsale ให้ลบทั้งใน sales_pr และ sub_sales_pr
 app.get("/delsale", async (req, res) => {
     const idToDelete = req.query.id;
