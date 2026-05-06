@@ -28,7 +28,8 @@
             <a href="#">เสนอซื้อ</a>
             <a href="#">คลังสินค้า</a>
         </nav>
-        <div style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div
+            style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="color: #a0a0b5; margin-bottom: 10px; font-size: 0.9rem;">
                 <i class="fas fa-user-circle"></i>
                 <%= (typeof user !=='undefined' && user) ? user['ชื่อภาษาอังกฤษpic'] : 'Unknown' %>
@@ -208,8 +209,14 @@
                                 "id": currentEditId,
                                 "orderDate": rawOrderData.length > 0 ? (rawOrderData[0]["วันที่"] || "") : "",
                                 "customerName": rawOrderData.length > 0 ? (rawOrderData[0]["ลูกค้า-ผู้ขาย"] || "") : "",
-                                "sellerName": rawOrderData.length > 0 ? (rawOrderData[0]["ผู้สร้าง"] || "") : "",
+                                "sellerName": <%- JSON.stringify((typeof user !== 'undefined' && user) ? user['ชื่อภาษาอังกฤษpic'] : 'Unknown') %>,
+                                "picId": <%- JSON.stringify((typeof user !== 'undefined' && user) ? user['รหัสpic'] : '') %>,
+                                "picName": <%- JSON.stringify((typeof user !== 'undefined' && user) ? user['ชื่อpic'] : '') %>,
+                                "picKeyword": <%- JSON.stringify((typeof user !== 'undefined' && user) ? user['ครีเวิด'] : '') %>,
+                                "picDepartment": <%- JSON.stringify((typeof user !== 'undefined' && user) ? user['แผนก'] : '') %>,
+                                "picPhone": <%- JSON.stringify((typeof user !== 'undefined' && user) ? user['เบอร์ติดต่อ'] : '') %>,
                                 "note": "",
+                                "title": "ใบเสนอขาย",
                                 "email": "as_auto@live.com",
                                 "company": "",
                                 "attn": " ",
@@ -395,7 +402,7 @@
 
                 function saveOrderDetails() {
                     var updatedData = {};
-                    orderFields.forEach(function(field) {
+                    orderFields.forEach(function (field) {
                         var input = document.getElementById('edit_order_' + field);
                         if (input && !input.readOnly) {
                             updatedData[field] = input.value;
@@ -407,12 +414,12 @@
 
                     // อัปเดต rawSalesData ใน memory เพื่อให้เปิด modal ครั้งถัดไปเห็นค่าใหม่
                     if (rawSalesData.length > 0) {
-                        Object.keys(updatedData).forEach(function(key) {
+                        Object.keys(updatedData).forEach(function (key) {
                             rawSalesData[0][key] = updatedData[key];
                         });
                     }
                     if (rawOrderData.length > 0) {
-                        Object.keys(updatedData).forEach(function(key) {
+                        Object.keys(updatedData).forEach(function (key) {
                             if (rawOrderData[0].hasOwnProperty(key)) {
                                 rawOrderData[0][key] = updatedData[key];
                             }
@@ -426,7 +433,7 @@
                         if (row) {
                             var cells = row.querySelectorAll('td');
                             var keys = Object.keys(rawOrderData[0]);
-                            keys.forEach(function(key, i) {
+                            keys.forEach(function (key, i) {
                                 if (cells[i]) cells[i].textContent = rawOrderData[0][key] || '';
                             });
                         }
