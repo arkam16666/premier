@@ -1,0 +1,295 @@
+/* Reset and Core Layout */
+.add-sale-page {
+    background-color: #0c0816;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(91, 33, 182, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(219, 39, 119, 0.1) 0%, transparent 40%);
+    min-height: 100vh;
+    display: flex;
+}
+
+.content-area {
+    margin-left: 200px; /* Sidebar width */
+    flex: 1;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Center vertically for "fit to screen" feel */
+    padding: 20px;
+}
+
+.page-container {
+    width: 100%;
+    max-width: 1100px; /* Increased width to utilize screen better */
+    animation: slideInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Premium Form Card */
+.form-card {
+    background: #150e26;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header Section */
+.form-header-premium {
+    padding: 30px 50px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.03), transparent);
+    position: relative;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(167, 134, 255, 0.1);
+    color: #a786ff;
+    border-radius: 100px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.header-main h1 {
+    font-size: 2rem;
+    color: #fff;
+    margin-bottom: 5px;
+    font-weight: 800;
+}
+
+.header-main p {
+    color: #8b8b9e;
+    font-size: 0.95rem;
+}
+
+/* Main Form Content */
+.main-form {
+    padding: 30px 50px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.input-section {
+    margin-bottom: 0;
+}
+
+.section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #ff7eb3;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Downsized Selection Cards */
+.selection-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.select-card {
+    cursor: pointer;
+    position: relative;
+}
+
+.select-card input {
+    position: absolute;
+    opacity: 0;
+}
+
+.card-body {
+    background: #1c142e;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+}
+
+.icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.icon-box.sale { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.icon-box.purchase { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+
+.text-box .label {
+    display: block;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.text-box .sub-label {
+    color: #6b6b7c;
+    font-size: 0.7rem;
+}
+
+.radio-indicator {
+    margin-left: auto;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+/* Selection States */
+.select-card input:checked + .card-body {
+    background: rgba(167, 134, 255, 0.05);
+    border-color: #a786ff;
+}
+
+.select-card input:checked + .card-body .radio-indicator {
+    border-color: #a786ff;
+    background: #a786ff;
+}
+
+/* Enlarged Responsive Textarea */
+.textarea-container {
+    position: relative;
+    background: #1c142e;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.textarea-container textarea {
+    width: 100%;
+    height: 35vh; /* Responsive height based on screen height */
+    min-height: 250px;
+    max-height: 500px;
+    background: transparent;
+    border: none;
+    padding: 20px;
+    color: #fff;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+}
+
+.focus-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 3px;
+    background: #ff7eb3;
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.textarea-container textarea:focus + .focus-line {
+    width: 100%;
+}
+
+/* Action Footer */
+.action-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-back {
+    color: #8b8b9e;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    color: #fff;
+}
+
+.btn-submit-premium {
+    background: linear-gradient(135deg, #ff7eb3 0%, #ff5e9e 100%);
+    color: #fff;
+    border: none;
+    padding: 16px 40px;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 20px rgba(255, 126, 179, 0.2);
+}
+
+.btn-submit-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px rgba(255, 126, 179, 0.4);
+}
+
+/* Animations */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .content-area {
+        margin-left: 0;
+        width: 100%;
+        padding: 15px;
+    }
+    
+    .page-container {
+        max-width: 100%;
+    }
+    
+    .form-header-premium, .main-form {
+        padding: 25px;
+    }
+    
+    .selection-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-footer {
+        flex-direction: column-reverse;
+        gap: 20px;
+    }
+    
+    .btn-submit-premium {
+        width: 100%;
+        justify-content: center;
+    }
+}

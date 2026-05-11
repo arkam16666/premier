@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="menubar.css">
+    <link rel="stylesheet" href="edit_sale.css">
+    <link rel="stylesheet" href="add_order.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>เพิ่มออเดอร์ใหม่</title>
+    <style>
+        .success-toast {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 16px 28px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+            transform: translateX(150%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 9999;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .success-toast.show {
+            transform: translateX(0);
+        }
+        .success-toast i {
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body class="add-sale-page">
+    <div id="successToast" class="success-toast">
+        <i class="fas fa-check-circle"></i>
+        <span>ส่งแล้ว</span>
+    </div>
+
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>ระบบ ERP</h2>
+            <span>ระดับจงกร</span><br>
+        </div>
+
+        <nav class="menu">
+            <a href="<%= baseUrl %>/">Dashboard</a>
+            <a href="<%= baseUrl %>/add_sale" class="active">เพิ่มออเดอร์</a>
+            <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
+            <a href="#">เสนอซื้อ</a>
+            <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
+        </nav>
+        <div style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="color: #a0a0b5; margin-bottom: 10px; font-size: 0.9rem;">
+                <i class="fas fa-user-circle"></i>
+                <%= (typeof user !=='undefined' && user) ? user['ชื่อภาษาอังกฤษpic'] : 'Unknown' %>
+            </div>
+            <a href="<%= baseUrl %>/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+            </a>
+        </div>
+    </aside>
+
+    <main class="content-area">
+        <div class="page-container">
+            <div class="form-card">
+                <div class="form-header-premium">
+                    <div class="header-main">
+                        <h1>สร้างรายการใหม่</h1>
+                        <p>กรุณาเลือกประเภทและกรอกรายละเอียดข้อมูลคู่ค้า</p>
+                    </div>
+                    <div class="header-accent"></div>
+                </div>
+
+            <form id="addOrderForm" class="main-form">
+                <input type="hidden" name="วันที่" value="<%= today %>">
+                <input type="hidden" name="PIC" value="<%= user['ชื่อภาษาอังกฤษpic'] %>">
+
+                <div class="input-section">
+                    <h3 class="section-label">เลือกประเภทรายการ</h3>
+                    <div class="selection-grid">
+                        <label class="select-card">
+                            <input type="radio" name="orderType" value="sale" checked>
+                            <div class="card-body">
+                                <div class="icon-box sale">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                </div>
+                                <div class="text-box">
+                                    <span class="label">เสนอขาย</span>
+                                </div>
+                                <div class="radio-indicator"></div>
+                            </div>
+                        </label>
+
+                        <label class="select-card">
+                            <input type="radio" name="orderType" value="purchase">
+                            <div class="card-body">
+                                <div class="icon-box purchase">
+                                    <i class="fas fa-cart-arrow-down"></i>
+                                </div>
+                                <div class="text-box">
+                                    <span class="label">เสนอซื้อ</span>
+                                </div>
+                                <div class="radio-indicator"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <h3 class="section-label">ข้อมูลลูกค้า / รายละเอียด</h3>
+                    <div class="textarea-container">
+                        <textarea 
+                            name="ลูกค้า-ผู้ขาย" 
+                            placeholder="พิมพ์ชื่อบริษัท หรือรายละเอียดสำคัญที่นี่..." 
+                            required 
+                            autofocus
+                        ></textarea>
+                        <div class="focus-line"></div>
+                    </div>
+                </div>
+
+                <div class="action-footer">
+                    <a href="/sale_pr" class="btn-back">
+                        <i class="fas fa-chevron-left"></i> กลับไปหน้าเสนอขาย
+                    </a>
+                    <button type="submit" class="btn-submit-premium" id="submitBtn">
+                        <span>ยืนยันข้อมูลรายการ</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script>
+    document.getElementById('addOrderForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('submitBtn');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<span>กำลังส่ง...</span> <i class="fas fa-spinner fa-spin"></i>';
+        btn.style.pointerEvents = 'none';
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch('/add_sale', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // แสดง Toast แทน Alert
+                const toast = document.getElementById('successToast');
+                toast.classList.add('show');
+                
+                // ซ่อน Toast หลังจาก 3 วินาที
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+
+                this.reset(); // ล้างข้อมูลในฟอร์มเพื่อให้พร้อมพิมพ์อันใหม่
+                this.querySelector('textarea').focus();
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + (result.error || 'ไม่สามารถสร้างรายการได้'));
+            }
+        } catch (err) {
+            console.error('Error:', err);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+        } finally {
+            btn.innerHTML = originalHTML;
+            btn.style.pointerEvents = 'auto';
+        }
+    });
+</script>
+</body>
+
+</html>

@@ -13,11 +13,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const session = require("express-session");
+const FileStore = require('session-file-store')(session);
+
 app.use(session({
+    store: new FileStore({
+        path: './sessions',
+        retries: 0
+    }),
     secret: 'erp-secret-key-2026',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // Set true if using HTTPS
+    cookie: { 
+        secure: false,
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 วัน
+    }
 }));
 
 // ส่ง baseUrl ไปทุก view อัตโนมัติ
@@ -59,6 +68,39 @@ async function getsheet(id, table) {
     } catch (err) {
         console.error("Error fetching sheet:", err.message);
         return [];
+    }
+}
+
+async function generateNextId(prefix, sheetName) {
+    try {
+        const now = new Date();
+        // Thai year (Buddhist year) = Gregorian year + 543
+        const yy = ((now.getFullYear() + 543) % 100).toString().padStart(2, '0');
+        const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+        const pattern = `${prefix}-${yy}${mm}-`;
+
+        const result = await sheets.spreadsheets.values.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A:A`,
+        });
+
+        const rows = result.data.values || [];
+        const ids = rows.flat().filter(id => id && id.trim().startsWith(pattern));
+        
+        let maxSeq = 0;
+        ids.forEach(id => {
+            const parts = id.trim().split('-');
+            if (parts.length === 3) {
+                const seq = parseInt(parts[2]);
+                if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+            }
+        });
+
+        const nextSeq = (maxSeq + 1).toString().padStart(4, '0');
+        return `${pattern}${nextSeq}`;
+    } catch (err) {
+        console.error("Error generating next ID:", err);
+        return `${prefix}-${Date.now()}`; // fallback
     }
 }
 
@@ -733,8 +775,11 @@ app.post("/api/update_order", async (req, res) => {
 // API ยืนยัน + อัปเดตวันที่แก้ไขล่าสุด / ผู้แก้ไขล่าสุด แล้วส่ง Webhook
 app.post("/api/confirm-webhook", async (req, res) => {
     const { id } = req.body;
+    console.log("--- Confirm Webhook Debug ---");
+    console.log("Request ID:", id);
 
     if (!id) {
+        console.warn("No ID provided in request body");
         return res.status(400).json({ error: "ต้องระบุ id" });
     }
 
@@ -759,12 +804,14 @@ app.post("/api/confirm-webhook", async (req, res) => {
 
         const allRows = result.data.values ?? [];
         if (allRows.length === 0) {
+            console.warn("Sheet is empty or not found");
             return res.status(404).json({ error: "ไม่พบข้อมูลใน Sheet" });
         }
 
         const headers = [...allRows[0]];
         const idColIndex = headers.indexOf("id");
         if (idColIndex === -1) {
+            console.error("Column 'id' not found in headers:", headers);
             return res.status(500).json({ error: "ไม่พบคอลัมน์ id" });
         }
 
@@ -778,8 +825,11 @@ app.post("/api/confirm-webhook", async (req, res) => {
         }
 
         if (rowIndex === -1) {
+            console.warn(`Record with ID ${id} not found in sheet`);
             return res.status(404).json({ error: `ไม่พบข้อมูล ID: ${id}` });
         }
+
+        console.log(`Found record at row ${rowIndex + 1}`);
 
         // 3. Find or add header columns
         let dateColIndex = headers.indexOf("วันที่แก้ไขล่าสุด");
@@ -799,6 +849,7 @@ app.post("/api/confirm-webhook", async (req, res) => {
 
         // 4. Update headers if new columns were added
         if (headersChanged) {
+            console.log("Updating sheet headers...");
             await sheetsWrite.spreadsheets.values.update({
                 spreadsheetId: process.env.GOOGLE_SHEET_ID,
                 range: `${sheetName}!A1`,
@@ -815,6 +866,7 @@ app.post("/api/confirm-webhook", async (req, res) => {
         currentRow[dateColIndex] = dateStr;
         currentRow[editorColIndex] = userName;
 
+        console.log("Updating record with date and editor...");
         await sheetsWrite.spreadsheets.values.update({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
             range: `${sheetName}!A${rowIndex + 1}`,
@@ -825,32 +877,69 @@ app.post("/api/confirm-webhook", async (req, res) => {
         console.log(`ยืนยัน ID: ${id} โดย ${userName} เวลา ${dateStr}`);
 
         // 6. Call the webhook
-        const webhookUrl = process.env.WEBHOOK_TEST_URL;
+        const typeColIndex = headers.indexOf("ประเภทธุรกรรม");
+        const transactionType = typeColIndex !== -1 ? (allRows[rowIndex][typeColIndex] || "") : "ไม่พบข้อมูลคอลัมน์";
+
+        // ลำดับความสำคัญ: WEBHOOK_CONFIRM_SALE_URL -> WEBHOOK_SALES_URL -> WEBHOOK_TEST_URL
+        // หากไม่มีใน .env จะใช้ค่า default เป็น localhost ตามที่แจ้งมา
+        let webhookUrl = process.env.WEBHOOK_CONFIRM_SALE_URL || process.env.WEBHOOK_SALES_URL || process.env.WEBHOOK_TEST_URL;
+        
+        if (!webhookUrl) {
+            webhookUrl = "https://n8n.thanadon.click/webhook-test/bbfedac4-3a58-4092-9e4a-3773234c19b1";
+            console.log("- Using fallback local n8n URL");
+        }
+
+        console.log("Debug Webhook Selection:");
+        console.log("- Transaction Type (from sheet):", transactionType);
+        console.log("- Selected Webhook URL:", webhookUrl);
+
+        const picId = user ? (user['รหัสpic'] || '') : '';
         let webhookSuccess = false;
         let webhookError = null;
 
         if (webhookUrl) {
             try {
-                const webhookResponse = await fetch(webhookUrl + '?id=' + encodeURIComponent(id), {
+                const urlWithParams = new URL(webhookUrl);
+                urlWithParams.searchParams.append('id', id);
+                urlWithParams.searchParams.append('name', userName); // ส่งชื่อ PIC ไปด้วย
+                urlWithParams.searchParams.append('picId', picId);
+
+                console.log("Calling external webhook:", urlWithParams.toString());
+                const webhookResponse = await fetch(urlWithParams.toString(), {
                     method: 'GET'
                 });
+
+                console.log("External Webhook Response Status:", webhookResponse.status);
 
                 if (webhookResponse.ok) {
                     webhookSuccess = true;
                 } else {
                     const errorText = await webhookResponse.text();
-                    webhookError = { status: webhookResponse.status, message: errorText };
+                    console.error("External Webhook Error Response:", errorText);
+                    return res.status(500).json({ 
+                        success: false, 
+                        error: `Webhook ตอบกลับด้วยข้อผิดพลาด: ${webhookResponse.status} ${errorText}` 
+                    });
                 }
             } catch (webhookErr) {
-                webhookError = { status: 0, message: webhookErr.message };
+                console.error("External Webhook connection error:", webhookErr);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: `ไม่สามารถเชื่อมต่อกับ Webhook ได้: ${webhookErr.message}` 
+                });
             }
+        } else {
+            console.warn("No webhook URL defined for confirmation!");
+            return res.status(500).json({ 
+                success: false, 
+                error: "ไม่พบการตั้งค่า Webhook URL ในระบบ (ตรวจสอบ .env)" 
+            });
         }
 
         res.json({
             success: true,
             sheetUpdated: true,
-            webhookSuccess,
-            webhookError
+            webhookSuccess: true
         });
 
     } catch (err) {
@@ -895,6 +984,107 @@ app.post('/api/generate-pdf', async (req, res) => {
     } catch (error) {
         console.error('Error in proxy /api/generate-pdf:', error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.get("/inventory", async (req, res) => {
+    try {
+        const data = await getsheet(null, "stock");
+        const searchQuery = (req.query.search || "").trim().toLowerCase();
+        
+        let filteredData = data;
+        if (searchQuery) {
+            filteredData = data.filter(item => {
+                return Object.values(item).some(val =>
+                    String(val).toLowerCase().includes(searchQuery)
+                );
+            });
+        }
+
+        res.render("inventory", {
+            data: filteredData,
+            search: req.query.search || ""
+        });
+    } catch (err) {
+        console.error("Error in /inventory:", err);
+        res.status(500).send("เกิดข้อผิดพลาดในการโหลดข้อมูลคลังสินค้า: " + err.message);
+    }
+});
+
+app.get('/add_sale', (req, res) => {
+    const today = new Date().toISOString().split('T')[0];
+    res.render('add_sale', { today });
+});
+
+app.post('/add_sale', async (req, res) => {
+    try {
+        const user = req.session.user;
+        const { orderType, วันที่, PIC } = req.body;
+        const customerDetails = req.body['ลูกค้า-ผู้ขาย'];
+
+        // กำหนด Webhook URL ตามประเภท
+        let webhookUrl = process.env.WEBHOOK_TEST_URL;
+        if (orderType === 'sale' && process.env.WEBHOOK_SALES_URL) {
+            webhookUrl = process.env.WEBHOOK_SALES_URL;
+        }
+
+        console.log("--- Add Sale Webhook Debug ---");
+        console.log("Order Type:", orderType);
+        console.log("Webhook URL:", webhookUrl);
+
+        if (!webhookUrl) {
+            console.warn("No Webhook URL defined for this order type!");
+            return res.status(500).json({ 
+                success: false, 
+                error: "ไม่พบ Webhook URL ในระบบ (ตรวจสอบ .env)" 
+            });
+        }
+
+        const payload = {
+            action: 'create_order',
+            orderType: orderType,
+            date: วันที่,
+            picName: PIC,
+            picId: user ? (user['รหัสpic'] || '') : '',
+            customerDetails: customerDetails,
+            timestamp: new Date().toISOString()
+        };
+        
+        console.log("Payload:", JSON.stringify(payload));
+
+        try {
+            // สร้าง URL พร้อม Query Parameters สำหรับ GET request
+            const urlWithParams = new URL(webhookUrl);
+            Object.keys(payload).forEach(key => {
+                urlWithParams.searchParams.append(key, payload[key]);
+            });
+
+            const response = await fetch(urlWithParams.toString(), {
+                method: 'GET'
+            });
+
+            console.log("Webhook Response Status:", response.status);
+            
+            if (response.ok) {
+                return res.json({ success: true });
+            } else {
+                const errorText = await response.text();
+                console.error("Webhook Error Response:", errorText);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: `Webhook ตอบกลับด้วยข้อผิดพลาด: ${response.status} ${errorText}` 
+                });
+            }
+        } catch (fetchErr) {
+            console.error("n8n Webhook fetch error:", fetchErr);
+            return res.status(500).json({ 
+                success: false, 
+                error: `ไม่สามารถเชื่อมต่อกับ Webhook ได้: ${fetchErr.message}` 
+            });
+        }
+    } catch (err) {
+        console.error("Error in add_sale proxy:", err);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

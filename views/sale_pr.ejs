@@ -24,10 +24,11 @@
     </div>
 
     <nav class="menu">
-      <a href="<%= baseUrl %>/" class="active">Dashboard</a>
-      <a href="<%= baseUrl %>/sale_pr" class="buy">เสนอขาย</a>
+      <a href="<%= baseUrl %>/">Dashboard</a>
+      <a href="<%= baseUrl %>/add_sale">เพิ่มออเดอร์</a>
+      <a href="<%= baseUrl %>/sale_pr" class="active">เสนอขาย</a>
       <a href="#">เสนอซื้อ</a>
-      <a href="#">คลังสินค้า</a>
+      <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
     </nav>
 
     <div style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -61,9 +62,11 @@
           <tr>
             <% if (data && data.length> 0) { %>
               <% Object.keys(data[0]).forEach(h=> { %>
+                <% if (h !== 'สถานะเอกสาร') { %>
                 <th>
                   <%= h %>
                 </th>
+                <% } %>
                 <% }) %>
 
                   <th style="text-align: center;">จัดการ</th>
@@ -76,10 +79,12 @@
           <% if (data && data.length> 0) { %>
             <% data.forEach(row=> { %>
               <tr>
-                <% Object.values(row).forEach(val=> { %>
+                <% Object.entries(row).forEach(([key, val])=> { %>
+                  <% if (key !== 'สถานะเอกสาร') { %>
                   <td>
                     <%= val %>
                   </td>
+                  <% } %>
                   <% }) %>
 
                     <td style="text-align: center;">
@@ -131,19 +136,9 @@
         const result = await response.json();
 
         if (response.ok && result.success) {
-          if (result.webhookSuccess) {
-            alert('ส่งข้อมูล ID: ' + id + ' ไปยัง Webhook สำเร็จ!');
-          } else if (result.webhookError) {
-            if (result.webhookError.status === 404 && result.webhookError.message && result.webhookError.message.includes('is not registered')) {
-              alert('บันทึกข้อมูลสำเร็จ แต่ Webhook ยังไม่พร้อมทำงาน (ถ้าเป็น Test Webhook บน n8n กรุณากดปุ่ม "Execute workflow" ก่อนทดสอบครับ)');
-            } else {
-              alert('บันทึกข้อมูลสำเร็จ แต่ส่ง Webhook ไม่สำเร็จ (Status ' + result.webhookError.status + ')');
-            }
-          } else {
-            alert('บันทึกข้อมูลสำเร็จ!');
-          }
+          alert('ส่งแล้ว');
         } else {
-          alert('เกิดข้อผิดพลาด: ' + (result.error || 'Unknown error'));
+          alert('เกิดข้อผิดพลาด: ' + (result.error || 'ไม่สามารถส่งข้อมูลได้'));
         }
       } catch (err) {
         console.error('Error:', err);

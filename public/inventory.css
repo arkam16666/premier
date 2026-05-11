@@ -1,0 +1,158 @@
+/* Inventory Specific Styles */
+.inventory-container {
+    padding: 20px;
+}
+
+/* Glassmorphism Loading Overlay */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 200px; /* Sidebar width */
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 10, 26, 0.8);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.loader-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.loader-circle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 4px solid transparent;
+    border-top-color: #ff7eb3;
+    border-radius: 50%;
+    animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+.loader-circle-inner {
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    top: 15%;
+    left: 15%;
+    border: 4px solid transparent;
+    border-bottom-color: #a786ff;
+    border-radius: 50%;
+    animation: spin-reverse 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+@keyframes spin-reverse {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(-360deg); }
+}
+
+.loading-text {
+    margin-top: 25px;
+    color: white;
+    font-family: 'Kanit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 300;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255, 126, 179, 0.5);
+}
+
+/* Advanced Table Entry Animation */
+.inventory-table tbody tr {
+    opacity: 0;
+    transform: translateY(30px) scale(0.98);
+    animation: entryEffect 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes entryEffect {
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Generate staggered delays for rows (more refined) */
+.inventory-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
+.inventory-table tbody tr:nth-child(2) { animation-delay: 0.15s; }
+.inventory-table tbody tr:nth-child(3) { animation-delay: 0.2s; }
+.inventory-table tbody tr:nth-child(4) { animation-delay: 0.25s; }
+.inventory-table tbody tr:nth-child(5) { animation-delay: 0.3s; }
+.inventory-table tbody tr:nth-child(6) { animation-delay: 0.35s; }
+.inventory-table tbody tr:nth-child(7) { animation-delay: 0.4s; }
+.inventory-table tbody tr:nth-child(8) { animation-delay: 0.45s; }
+.inventory-table tbody tr:nth-child(9) { animation-delay: 0.5s; }
+.inventory-table tbody tr:nth-child(10) { animation-delay: 0.55s; }
+
+/* Enhanced Row Hover */
+.inventory-table tr:hover td {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: #ff7eb3 !important;
+    box-shadow: inset 0 0 15px rgba(255, 126, 179, 0.1);
+    transition: all 0.3s ease;
+}
+
+.inventory-table tr td {
+    transition: all 0.3s ease;
+}
+
+/* Status Badges with Pulse */
+.status-badge {
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-badge::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shine 2s infinite;
+}
+
+@keyframes shine {
+    to { left: 200%; }
+}
+
+.status-in-stock {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.status-low-stock {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.status-out-of-stock {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+@media (max-width: 768px) {
+    #loading-overlay {
+        left: 0;
+    }
+}
