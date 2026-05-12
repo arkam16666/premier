@@ -293,8 +293,89 @@
             });
         }
 
-        function printPDF() {
-            alert('กรุณากดยืนยันเพื่อบันทึกข้อมูลก่อนสั่งพิมพ์ เพื่อให้ข้อมูลใน PDF ถูกต้องที่สุด');
+        async function printPDF() {
+            const rows = document.querySelectorAll('#salePrBody .item-row');
+            const itemsList = [];
+
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                    if (qty > 0) {
+                        itemsList.push({
+                            'sku': row.cells[1].innerText,
+                            'productName': row.cells[2].innerText,
+                            'info': row.cells[3].innerText, // ข้อมูลจำเพราะ
+                            'qty': qty,
+                            'unit': row.cells[5].innerText,
+                            'unitPrice': parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0,
+                            'amount': parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0,
+                            'vat': parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0,
+                            'total': parseFloat(row.cells[9].innerText.replace(/,/g, '')) || 0
+                        });
+                    }
+                }
+            });
+
+            if (itemsList.length === 0) {
+                alert('ไม่มีรายการสินค้าสำหรับสั่งพิมพ์');
+                return;
+            }
+
+            const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+            const totalVat = itemsList.reduce((sum, item) => sum + (item.vat || 0), 0);
+            const grandTotal = itemsList.reduce((sum, item) => sum + (item.total || 0), 0);
+            
+            // เตรียม Payload ให้ตรงกับโครงสร้างที่ Python (main.py) คาดหวังแบบเป๊ะๆ
+            // 1. Python จะเช็ค json_data["items"][0] มาเป็นข้อมูลหลัก (inner)
+            // 2. ข้อมูลตารางสินค้าต้องอยู่ใน inner["items"]
+            const payload = {
+                items: [{
+                    id: currentEditId,
+                    orderDate: headerData['วันที่'] || '',
+                    picName: headerData['PIC'] || '',
+                    sellerName: headerData['ลูกค้า-ผู้ขาย'] || '',
+                    note: headerData['โทรศัพท์'] || '',
+                    picDepartment: '', // Placeholder
+                    title: 'ใบเสนอราคา / Sale Quotation',
+                    vat: Number(totalVat.toFixed(2)),
+                    grandTotal: Number(grandTotal.toFixed(2)),
+                    items: itemsList // รายการสินค้า sku, productName, qty, unitPrice, total
+                }]
+            };
+
+            const btn = document.getElementById('btnprint');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังเตรียมไฟล์...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/generate-pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errResult = await response.json();
+                    throw new Error(errResult.error || 'PDF Generation failed');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Sale_Order_${currentEditId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error('Print error:', err);
+                alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
 
         // --- Logic สำหรับ Order Modal ---
