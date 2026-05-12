@@ -13,40 +13,9 @@
     <link rel="stylesheet" href="add_order.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <title>เพิ่มออเดอร์ใหม่</title>
-    <style>
-        .success-toast {
-            position: fixed;
-            top: 30px;
-            right: 30px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 16px 28px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
-            transform: translateX(150%);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 9999;
-            font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .success-toast.show {
-            transform: translateX(0);
-        }
-        .success-toast i {
-            font-size: 1.2rem;
-        }
-    </style>
 </head>
 
 <body class="add-sale-page">
-    <div id="successToast" class="success-toast">
-        <i class="fas fa-check-circle"></i>
-        <span>ส่งแล้ว</span>
-    </div>
-
     <aside class="sidebar">
         <div class="logo">
             <h2>ระบบ ERP</h2>
@@ -63,7 +32,7 @@
         <div style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="color: #a0a0b5; margin-bottom: 10px; font-size: 0.9rem;">
                 <i class="fas fa-user-circle"></i>
-                <%= (typeof user !=='undefined' && user) ? user['ชื่อภาษาอังกฤษpic'] : 'Unknown' %>
+                <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
             </div>
             <a href="<%= baseUrl %>/logout" class="btn-logout">
                 <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
@@ -148,11 +117,6 @@
     document.getElementById('addOrderForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const btn = document.getElementById('submitBtn');
-        const originalHTML = btn.innerHTML;
-        btn.innerHTML = '<span>กำลังส่ง...</span> <i class="fas fa-spinner fa-spin"></i>';
-        btn.style.pointerEvents = 'none';
-
         const formData = new FormData(this);
         const data = Object.fromEntries(formData.entries());
 
@@ -166,16 +130,8 @@
             const result = await response.json();
 
             if (response.ok && result.success) {
-                // แสดง Toast แทน Alert
-                const toast = document.getElementById('successToast');
-                toast.classList.add('show');
-                
-                // ซ่อน Toast หลังจาก 3 วินาที
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 3000);
-
-                this.reset(); // ล้างข้อมูลในฟอร์มเพื่อให้พร้อมพิมพ์อันใหม่
+                alert('สร้างรายการสำเร็จ');
+                this.reset();
                 this.querySelector('textarea').focus();
             } else {
                 alert('เกิดข้อผิดพลาด: ' + (result.error || 'ไม่สามารถสร้างรายการได้'));
@@ -183,9 +139,6 @@
         } catch (err) {
             console.error('Error:', err);
             alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
-        } finally {
-            btn.innerHTML = originalHTML;
-            btn.style.pointerEvents = 'auto';
         }
     });
 </script>

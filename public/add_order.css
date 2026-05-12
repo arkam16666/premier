@@ -15,7 +15,7 @@
     display: flex;
     justify-content: center;
     align-items: center; /* Center vertically for "fit to screen" feel */
-    padding: 20px;
+    padding: 0; /* Removed padding */
 }
 
 .page-container {

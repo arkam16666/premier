@@ -31,7 +31,11 @@ app.use(session({
 
 // ส่ง baseUrl ไปทุก view อัตโนมัติ
 app.use((req, res, next) => {
-    res.locals.baseUrl = process.env.BASE_URL || '';
+    let baseUrl = process.env.BASE_URL || '';
+    if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+    }
+    res.locals.baseUrl = baseUrl;
     res.locals.webhookUrl = process.env.WEBHOOK_TEST_URL || '';
     next();
 });
@@ -46,22 +50,47 @@ const authWrite = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: "v4", auth: authReadonly });
 const sheetsWrite = google.sheets({ version: "v4", auth: authWrite });
 
+// Simple In-memory Cache
+const sheetCache = new Map();
+const CACHE_TTL = 30 * 1000; // 30 seconds
+
 async function getsheet(id, table) {
+    const cacheKey = `${table}_all`;
+    const now = Date.now();
+
     try {
-        const result = await sheets.spreadsheets.values.get({
-            spreadsheetId: process.env.GOOGLE_SHEET_ID,
-            range: `${table}!A1:AZ`,
-        });
+        let data;
+        
+        // Check cache if no specific ID is requested
+        if (!id && sheetCache.has(cacheKey)) {
+            const cached = sheetCache.get(cacheKey);
+            if (now - cached.timestamp < CACHE_TTL) {
+                console.log(`Using cached data for table: ${table}`);
+                data = cached.data;
+            }
+        }
 
-        const [headers, ...rows] = result.data.values ?? [];
-        if (!headers) return [];
+        if (!data) {
+            const result = await sheets.spreadsheets.values.get({
+                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                range: `${table}!A1:AZ`,
+            });
 
-        let data = rows.map((row) =>
-            Object.fromEntries(headers.map((h, i) => [h, row[i] ?? ""]))
-        );
+            const [headers, ...rows] = result.data.values ?? [];
+            if (!headers) return [];
+
+            data = rows.map((row) =>
+                Object.fromEntries(headers.map((h, i) => [h, row[i] ?? ""]))
+            );
+
+            // Update cache
+            if (!id) {
+                sheetCache.set(cacheKey, { data, timestamp: now });
+            }
+        }
 
         if (id) {
-            data = data.filter((row) => row["id"] === id);
+            return data.filter((row) => row["id"] === id);
         }
 
         return data;
@@ -187,8 +216,8 @@ app.get("/edit_sale", async (req, res) => {
         const salesData = await getsheet(idToEdit, "Sale_pr");
         const allProductsRaw = await getsheet(null, "product");
 
-        const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "กำหนดการยืนราคา"];
-        const subSaleHeaders = ["สินค้า", "ชื่อสินค้า", "จำนวน", "ราคาต่อหน่วย", "ภาษี", "จำนวนเงินรวม"];
+        const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
+        const subSaleHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี", "จำนวนเงินรวม"];
         const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาขาย", "แบรนด์", "อัตราภาษีขาย"];
 
         // ฟังก์ชันช่วยในการ map data
@@ -206,6 +235,7 @@ app.get("/edit_sale", async (req, res) => {
 
         // map data ตามหัวข้อที่กำหนด
         let salePrData = mapDataByHeaders(subSalesData, subSaleHeaders);
+        
         let orderData = mapDataByHeaders(salesData, saleHeaders);
         let allProducts = mapDataByHeaders(allProductsRaw, productHeaders);
         // ตัวกรอง (ถ้ามี searchQuery)
@@ -501,8 +531,8 @@ app.post("/api/add_rows", async (req, res) => {
 
 // API บันทึกการเปลี่ยนแปลงทั้งหมด (ทั้งเพิ่มและลบ)
 app.post("/api/save_changes", async (req, res) => {
-    const { id, deletes, adds } = req.body;
-    console.log('API /api/save_changes called for ID:', id, 'Deletes:', deletes?.length, 'Adds:', adds?.length);
+    const { id, finalItems, orderChanges } = req.body;
+    console.log('API /api/save_changes (Consolidated) called for ID:', id, 'Items:', finalItems?.length);
 
     if (!id) {
         return res.status(400).json({ error: "ต้องระบุ id" });
@@ -510,66 +540,59 @@ app.post("/api/save_changes", async (req, res) => {
 
     try {
         const sheetName = "sub_sales_pr";
-        let deletedCount = 0;
-        let addedCount = 0;
+        
+        // 1. Fetch current rows to find indices to delete
+        const result = await sheetsWrite.spreadsheets.values.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A1:AZ`,
+        });
 
-        // 1. จัดการการลบ (Deletes)
-        if (deletes && Array.isArray(deletes) && deletes.length > 0) {
-            const result = await sheetsWrite.spreadsheets.values.get({
-                spreadsheetId: process.env.GOOGLE_SHEET_ID,
-                range: `${sheetName}!A1:AZ`,
-            });
+        const allRows = result.data.values ?? [];
+        if (allRows.length > 0) {
+            const headers = allRows[0];
+            const idColIndex = headers.indexOf("id");
 
-            const allRows = result.data.values ?? [];
-            if (allRows.length > 0) {
-                const headers = allRows[0];
-                const idColIndex = headers.indexOf("id");
-                const productColIndex = headers.indexOf("สินค้า");
+            if (idColIndex !== -1) {
+                const spreadsheet = await sheetsWrite.spreadsheets.get({
+                    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                });
+                const sheetMeta = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
+                const sheetId = sheetMeta.properties.sheetId;
 
-                if (idColIndex !== -1 && productColIndex !== -1) {
-                    const spreadsheet = await sheetsWrite.spreadsheets.get({
-                        spreadsheetId: process.env.GOOGLE_SHEET_ID,
-                    });
-                    const sheetMeta = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
-                    const sheetId = sheetMeta.properties.sheetId;
-
-                    const rowsToDelete = [];
-                    for (let i = 1; i < allRows.length; i++) {
-                        const row = allRows[i];
-                        const rowId = (row[idColIndex] || "").toString().trim();
-                        const rowProduct = (row[productColIndex] || "").toString().trim();
-
-                        if (rowId === id.trim() && deletes.map(d => d.trim()).includes(rowProduct)) {
-                            rowsToDelete.push(i);
-                        }
+                const rowsToDelete = [];
+                for (let i = 1; i < allRows.length; i++) {
+                    const row = allRows[i];
+                    const rowId = (row[idColIndex] || "").toString().trim();
+                    if (rowId === id.trim()) {
+                        rowsToDelete.push(i);
                     }
+                }
 
-                    if (rowsToDelete.length > 0) {
-                        rowsToDelete.sort((a, b) => b - a);
-                        const requests = rowsToDelete.map((rowIndex) => ({
-                            deleteDimension: {
-                                range: {
-                                    sheetId: sheetId,
-                                    dimension: "ROWS",
-                                    startIndex: rowIndex,
-                                    endIndex: rowIndex + 1,
-                                },
+                // Delete all existing items for this ID
+                if (rowsToDelete.length > 0) {
+                    rowsToDelete.sort((a, b) => b - a);
+                    const requests = rowsToDelete.map((rowIndex) => ({
+                        deleteDimension: {
+                            range: {
+                                sheetId: sheetId,
+                                dimension: "ROWS",
+                                startIndex: rowIndex,
+                                endIndex: rowIndex + 1,
                             },
-                        }));
+                        },
+                    }));
 
-                        await sheetsWrite.spreadsheets.batchUpdate({
-                            spreadsheetId: process.env.GOOGLE_SHEET_ID,
-                            requestBody: { requests },
-                        });
-                        deletedCount = rowsToDelete.length;
-                    }
+                    await sheetsWrite.spreadsheets.batchUpdate({
+                        spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                        requestBody: { requests },
+                    });
                 }
             }
         }
 
-        // 2. จัดการการเพิ่ม (Adds)
-        if (adds && Array.isArray(adds) && adds.length > 0) {
-            const values = adds.map(p => {
+        // 2. Insert Final Items (Grouped and Recalculated)
+        if (finalItems && Array.isArray(finalItems) && finalItems.length > 0) {
+            const values = finalItems.map(p => {
                 const qty = parseFloat(p.quantity) || 0;
                 const price = parseFloat(p['ราคาขาย']) || 0;
                 const taxRateStr = (p['อัตราภาษีขาย'] || "0").toString().replace('%', '');
@@ -599,12 +622,9 @@ app.post("/api/save_changes", async (req, res) => {
                 valueInputOption: "USER_ENTERED",
                 requestBody: { values }
             });
-            addedCount = adds.length;
         }
 
-        console.log(`บันทึกการเปลี่ยนแปลงสำเร็จ: ลบ ${deletedCount}, เพิ่ม ${addedCount}`);
-
-        // 3. อัปเดต Order + วันที่แก้ไขล่าสุด / ผู้แก้ไขล่าสุด ใน Sale_pr
+        // 3. Update Main Order (Sale_pr)
         try {
             const saleSheetName = "Sale_pr";
             const user = req.session.user;
@@ -641,8 +661,6 @@ app.post("/api/save_changes", async (req, res) => {
                     if (saleRowIndex !== -1) {
                         const saleRow = [...(saleRows[saleRowIndex] || [])];
 
-                        // ถ้ามี orderChanges → อัปเดตค่าที่เปลี่ยนลงแถว
-                        const orderChanges = req.body.orderChanges;
                         if (orderChanges && typeof orderChanges === 'object') {
                             for (let j = 0; j < saleHeaders.length; j++) {
                                 const header = saleHeaders[j];
@@ -653,7 +671,6 @@ app.post("/api/save_changes", async (req, res) => {
                             }
                         }
 
-                        // อัปเดต วันที่แก้ไขล่าสุด / ผู้แก้ไขล่าสุด
                         if (saleDateCol !== -1) {
                             while (saleRow.length <= saleDateCol) saleRow.push("");
                             saleRow[saleDateCol] = dateStr;
@@ -669,8 +686,6 @@ app.post("/api/save_changes", async (req, res) => {
                             valueInputOption: "USER_ENTERED",
                             requestBody: { values: [saleRow] },
                         });
-
-                        console.log(`อัปเดต Sale_pr สำเร็จ - ผู้แก้ไข: ${userName}, วันที่: ${dateStr}, orderChanges: ${orderChanges ? 'yes' : 'no'}`);
                     }
                 }
             }
@@ -678,7 +693,7 @@ app.post("/api/save_changes", async (req, res) => {
             console.error("Error updating Sale_pr:", updateErr);
         }
 
-        res.json({ success: true, deleted: deletedCount, added: addedCount });
+        res.json({ success: true, message: "บันทึกการเปลี่ยนแปลงทั้งหมดเรียบร้อยแล้ว" });
 
     } catch (err) {
         console.error("Error saving changes:", err);
@@ -905,10 +920,17 @@ app.post("/api/confirm-webhook", async (req, res) => {
                 urlWithParams.searchParams.append('picId', picId);
 
                 console.log("Calling external webhook:", urlWithParams.toString());
+                
+                // Add timeout protection (10 seconds)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
                 const webhookResponse = await fetch(urlWithParams.toString(), {
-                    method: 'GET'
+                    method: 'GET',
+                    signal: controller.signal
                 });
 
+                clearTimeout(timeoutId);
                 console.log("External Webhook Response Status:", webhookResponse.status);
 
                 if (webhookResponse.ok) {
@@ -918,14 +940,20 @@ app.post("/api/confirm-webhook", async (req, res) => {
                     console.error("External Webhook Error Response:", errorText);
                     return res.status(500).json({ 
                         success: false, 
-                        error: `Webhook ตอบกลับด้วยข้อผิดพลาด: ${webhookResponse.status} ${errorText}` 
+                        error: `Webhook ตอบกลับด้วยข้อผิดพลาด (${webhookResponse.status}): ${errorText.substring(0, 100)}` 
                     });
                 }
             } catch (webhookErr) {
-                console.error("External Webhook connection error:", webhookErr);
+                console.error("External Webhook error:", webhookErr);
+                let errorMessage = `ไม่สามารถเชื่อมต่อกับ Webhook ได้: ${webhookErr.message}`;
+                if (webhookErr.name === 'AbortError') {
+                    errorMessage = 'Webhook ตอบสนองช้าเกินไป (Timeout 10s)';
+                } else if (webhookErr.code === 'ECONNREFUSED') {
+                    errorMessage = 'ไม่สามารถเชื่อมต่อกับ n8n ได้ (Connection Refused) ตรวจสอบว่า n8n รันอยู่หรือไม่?';
+                }
                 return res.status(500).json({ 
                     success: false, 
-                    error: `ไม่สามารถเชื่อมต่อกับ Webhook ได้: ${webhookErr.message}` 
+                    error: errorMessage 
                 });
             }
         } else {
@@ -1059,10 +1087,18 @@ app.post('/add_sale', async (req, res) => {
                 urlWithParams.searchParams.append(key, payload[key]);
             });
 
+            console.log("Calling Webhook:", urlWithParams.toString());
+
+            // Add timeout protection (10 seconds)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
             const response = await fetch(urlWithParams.toString(), {
-                method: 'GET'
+                method: 'GET',
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
             console.log("Webhook Response Status:", response.status);
             
             if (response.ok) {
@@ -1072,14 +1108,20 @@ app.post('/add_sale', async (req, res) => {
                 console.error("Webhook Error Response:", errorText);
                 return res.status(500).json({ 
                     success: false, 
-                    error: `Webhook ตอบกลับด้วยข้อผิดพลาด: ${response.status} ${errorText}` 
+                    error: `Webhook ตอบกลับด้วยข้อผิดพลาด (${response.status}): ${errorText.substring(0, 100)}` 
                 });
             }
         } catch (fetchErr) {
             console.error("n8n Webhook fetch error:", fetchErr);
+            let errorMessage = `ไม่สามารถเชื่อมต่อกับ Webhook ได้: ${fetchErr.message}`;
+            if (fetchErr.name === 'AbortError') {
+                errorMessage = 'Webhook ตอบสนองช้าเกินไป (Timeout 10s)';
+            } else if (fetchErr.code === 'ECONNREFUSED') {
+                errorMessage = 'ไม่สามารถเชื่อมต่อกับ n8n ได้ (Connection Refused) ตรวจสอบว่า n8n รันอยู่หรือไม่?';
+            }
             return res.status(500).json({ 
                 success: false, 
-                error: `ไม่สามารถเชื่อมต่อกับ Webhook ได้: ${fetchErr.message}` 
+                error: errorMessage 
             });
         }
     } catch (err) {

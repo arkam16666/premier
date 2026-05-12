@@ -34,7 +34,7 @@
     <div style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
       <div style="color: #a0a0b5; margin-bottom: 10px; font-size: 0.9rem;">
         <i class="fas fa-user-circle"></i>
-        <%= (typeof user !=='undefined' && user) ? user['ชื่อภาษาอังกฤษpic'] : 'Unknown' %>
+        <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
       </div>
       <a href="<%= baseUrl %>/logout" class="btn-logout">
         <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
@@ -62,13 +62,10 @@
           <tr>
             <% if (data && data.length> 0) { %>
               <% Object.keys(data[0]).forEach(h=> { %>
-                <% if (h !== 'สถานะเอกสาร') { %>
                 <th>
                   <%= h %>
                 </th>
-                <% } %>
                 <% }) %>
-
                   <th style="text-align: center;">จัดการ</th>
                   <th style="text-align: center;">ยืนยัน</th>
                   <th style="text-align: center;">ลบ</th>
@@ -80,35 +77,40 @@
             <% data.forEach(row=> { %>
               <tr>
                 <% Object.entries(row).forEach(([key, val])=> { %>
-                  <% if (key !== 'สถานะเอกสาร') { %>
                   <td>
-                    <%= val %>
+                    <% if (key === 'สถานะเอกสาร') { %>
+                      <span class="status-badge <%= val === 'สำเร็จ' ? 'status-success' : 'status-pending' %>">
+                        <%= val || 'รอดำเนินการ' %>
+                      </span>
+                    <% } else { %>
+                      <%= val %>
+                    <% } %>
                   </td>
-                  <% } %>
                   <% }) %>
 
                     <td style="text-align: center;">
-                      <a href="/edit_sale?id=<%= row['id'] %>">
+                      <a href="/edit_sale?id=<%= row['id'] %>" class="action-btn edit-btn">
                         <i class="fas fa-pencil"></i>
                       </a>
                     </td>
                     <td style="text-align: center;">
-                      <!-- เพิ่ม class 'send-webhook' และเก็บ ID ไว้ใน data-id -->
                       <a href="javascript:void(0);" onclick="confirmSendWebhook(this, '<%= row['id'] %>')"
-                        style="color: #007bff; cursor: pointer;">
-                        <i class="fas fa-paper-plane"></i> <!-- เปลี่ยนไอคอนเป็นรูปส่งของ -->
+                        class="action-btn confirm-btn">
+                        <i class="fas fa-paper-plane"></i>
                       </a>
                     </td>
                     <td style="text-align: center;">
-                      <a href="/delsale?id=<%= row['id'] %>" class="delete-btn"
-                        onclick="return handleDelete(this, '<%= row['id'] %>')">
+                      <a href="/delsale?id=<%= row['id'] %>" class="action-btn delete-btn"
+                        onclick="return confirm('ยืนยันการลบรายการ ID: <%= row['id'] %> ใช่หรือไม่?')">
                         <i class="fa-solid fa-trash"></i>
                       </a>
                     </td>
               </tr>
               <% }) } else { %>
                 <tr>
-                  <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                  <td colspan="100%" style="text-align: center; padding: 50px; font-style: italic; color: #666;">
+                    ไม่มีข้อมูล
+                  </td>
                 </tr>
                 <% } %>
         </tbody>
@@ -121,10 +123,6 @@
       if (!confirm('ยืนยันที่จะส่งข้อมูล ID: ' + id + ' ไปยัง Webhook ใช่หรือไม่?')) {
         return;
       }
-
-      const originalHTML = element.innerHTML;
-      element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-      element.style.pointerEvents = 'none';
 
       try {
         const response = await fetch('/api/confirm-webhook', {
@@ -143,9 +141,6 @@
       } catch (err) {
         console.error('Error:', err);
         alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
-      } finally {
-        element.innerHTML = originalHTML;
-        element.style.pointerEvents = 'auto';
       }
     }
 

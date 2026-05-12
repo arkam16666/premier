@@ -88,7 +88,7 @@ document.addEventListener('change', function(e) {
     }
 });
 
-// เพิ่มสินค้าที่เลือก
+// เพิ่มสินค้าที่เลือก (Updated for Item Grouping & Editable Quantity + Checkbox)
 function addSelectedProducts() {
     var rows = document.querySelectorAll('.modal-table tbody tr');
     var selectedProducts = [];
@@ -100,64 +100,56 @@ function addSelectedProducts() {
 
         if (checkbox && checkbox.checked && qtyInput && parseFloat(qtyInput.value) > 0) {
             var productCode = checkbox.value;
-            // ค้นหาข้อมูลเต็มจาก allProducts
             var fullProduct = allProducts.find(p => p['รหัส'] === productCode);
             
             if (fullProduct) {
-                var qty = parseFloat(qtyInput.value);
-                var price = parseFloat(fullProduct['ราคาขาย']) || 0;
-                var taxRateStr = (fullProduct['อัตราภาษีขาย'] || "0").toString().replace('%', '');
-                var taxRate = parseFloat(taxRateStr) || 0;
+                var qtyToAdd = parseFloat(qtyInput.value);
                 
-                var amount = qty * price;
-                var tax = amount * (taxRate / 100);
-                var total = amount + tax;
-
-                var productToAdd = {
-                    ...fullProduct,
-                    quantity: qty,
-                    amount: amount,
-                    tax: tax,
-                    total: total
-                };
-
-                selectedProducts.push(productToAdd);
-                pendingAdds.push(productToAdd);
-
-                // สร้างแถวใหม่ในตารางหลัก
-                var newRow = document.createElement('tr');
-                newRow.className = 'item pending-add';
-                newRow.setAttribute('data-product', productCode);
-                newRow.style.background = 'rgba(144, 238, 144, 0.2)'; // สีเขียวอ่อนสำหรับรายการใหม่
+                // Check if product already exists in the table
+                var existingRow = document.querySelector(`#salePrBody tr[data-product="${productCode}"]`);
                 
-                // คอลัมน์ข้อมูล (ต้องตรงกับลำดับใน sale_pr.ejs)
-                // ["สินค้า", "ชื่อสินค้า", "จำนวน", "ราคาต่อหน่วย", "ภาษี", "จำนวนเงินรวม"]
-                var cols = [
-                    productCode,
-                    fullProduct['ชื่อ'] || '',
-                    qty,
-                    price.toLocaleString(),
-                    tax.toLocaleString(),
-                    total.toLocaleString()
-                ];
+                if (existingRow) {
+                    // Update existing quantity
+                    var qtyInputInTable = existingRow.querySelector('.item-qty');
+                    var currentQty = parseFloat(qtyInputInTable.value) || 0;
+                    qtyInputInTable.value = currentQty + qtyToAdd;
+                    
+                    // Show row if it was hidden (soft-deleted)
+                    existingRow.style.display = '';
+                    existingRow.classList.add('pending-add');
+                } else {
+                    // Create a new row with editable input AND checkbox
+                    var newRow = document.createElement('tr');
+                    newRow.className = 'item-row pending-add';
+                    newRow.setAttribute('data-product', productCode);
+                    
+                    var price = parseFloat(fullProduct['ราคาขาย']) || 0;
+                    var amount = price * qtyToAdd;
+                    var taxRateStr = (fullProduct['อัตราภาษีขาย'] || "0").toString().replace('%', '');
+                    var taxRate = parseFloat(taxRateStr) || 0;
+                    var tax = amount * (taxRate / 100);
+                    var total = amount + tax;
 
-                cols.forEach(function(text) {
-                    var td = document.createElement('td');
-                    td.textContent = text;
-                    newRow.appendChild(td);
-                });
-
-                // คอลัมน์ checkbox (สำหรับลบ)
-                var tdCheck = document.createElement('td');
-                tdCheck.style.textAlign = 'center';
-                var cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.className = 'item-checkbox';
-                cb.value = productCode;
-                tdCheck.appendChild(cb);
-                newRow.appendChild(tdCheck);
-
-                tableBody.appendChild(newRow);
+                    newRow.innerHTML = `
+                        <td class="text-center">
+                            <input type="checkbox" class="item-checkbox">
+                        </td>
+                        <td>${productCode}</td>
+                        <td>${fullProduct['ชื่อ'] || ''}</td>
+                        <td>${fullProduct['ชื่อจำเพราะ'] || ''}</td>
+                        <td class="text-center">
+                            <input type="number" class="item-qty" min="0" step="any" value="${qtyToAdd}">
+                        </td>
+                        <td>${fullProduct['หน่วย'] || ''}</td>
+                        <td class="text-right">${price.toLocaleString()}</td>
+                        <td class="text-right">${amount.toLocaleString()}</td>
+                        <td class="text-right">${tax.toLocaleString()}</td>
+                        <td class="item-total text-right">${total.toLocaleString()}</td>
+                    `;
+                    
+                    tableBody.appendChild(newRow);
+                }
+                selectedProducts.push(fullProduct);
             }
         }
     });
@@ -167,7 +159,6 @@ function addSelectedProducts() {
         return;
     }
 
-    console.log('เพิ่มรายการชั่วคราว:', selectedProducts);
     updateSelectedCount();
     closeModal();
 }
