@@ -6,69 +6,50 @@
 
 body {
     display: flex;
-    /* ทำให้ sidebar กับ main วางข้างกัน */
     align-items: flex-start;
-    /* บังคับให้ทุกอย่างชิดขอบบน */
-    background-color: #0f0a1a;
+    background-color: #0b0714;
+    color: #e0e0e0;
 }
 
-.menu a:hover:not(.active) {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: translateX(5px);
-}
-
-/* จัดการพื้นที่หลัก */
 main {
     top: 0;
-    background-color: #0f0a1a;
-    /* สีพื้นหลังให้เข้ากับโทนเว็บ */
+    background-color: #0b0714;
     min-height: 100vh;
     color: white;
     margin-left: 200px;
     width: calc(100% - 200px);
-
-    /* Animation: เนื้อหาค่อยๆ โผล่ขึ้นมา */
-    animation: fadeInUp 0.6s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    animation: fadeIn 0.6s ease-out;
 }
 
 /* แต่งตาราง */
 table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     margin-top: 20px;
-    background-color: #1a0b2e;
-    border-radius: 15px;
+    background-color: #150c22;
+    border-radius: 8px;
     overflow: hidden;
-    /* ให้มุมตารางโค้งตาม border-radius */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-
-    /* Animation: ตาราง scale เข้ามา */
-    animation: scaleIn 0.5s 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* ส่วนหัวตาราง */
 th {
-    background-color: #25163d;
+    background-color: #1d112e;
     color: #ff7eb3;
-    /* สีชมพูเดียวกับ Logo */
-    font-weight: 500;
+    font-weight: 600;
     text-align: left;
-    padding: 15px;
-    border-bottom: 2px solid #2a1b3d;
+    padding: 12px 15px;
+    border-bottom: 1px solid #281a3d;
+    font-size: 13px;
     text-transform: uppercase;
-    font-size: 14px;
-    letter-spacing: 1px;
-    white-space: nowrap;
 }
 
 /* ส่วนเนื้อหา */
 td {
-    padding: 14px 15px;
-    border-bottom: 1px solid #2a1b3d;
+    padding: 12px 15px;
+    border-bottom: 1px solid #1d112e;
     color: #e0e0e0;
-    font-size: 15px;
-    white-space: nowrap;
+    font-size: 14px;
 }
 
 /* แถวตาราง */
@@ -294,4 +275,75 @@ a i {
 .action-btn i {
     padding: 0;
     font-size: 14px;
+}
+
+/* ===== Status Tabs - Modern Glassmorphism Pill Style ===== */
+.status-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 25px;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 50px;
+    width: fit-content;
+    backdrop-filter: blur(10px);
+    animation: fadeInUp 0.5s 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.status-tab {
+    padding: 10px 24px;
+    border-radius: 40px;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+}
+
+.status-tab:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.status-tab i {
+    font-size: 0.95rem;
+    transition: transform 0.3s ease;
+}
+
+.status-tab:hover i {
+    transform: scale(1.1);
+}
+
+/* Active State - Themed Gradients */
+.status-tab.active {
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ทั้งหมด - Purple Gradient */
+.status-tab.active[href*="status=ทั้งหมด"] {
+    background: linear-gradient(135deg, #a786ff 0%, #7a31da 100%);
+    box-shadow: 0 4px 15px rgba(167, 134, 255, 0.3);
+}
+
+/* ยังไม่ยืนยัน - Amber Gradient */
+.status-tab.active[href*="status=ยังไม่ยืนยัน"] {
+    background: linear-gradient(135deg, #ffca2c 0%, #ff9800 100%);
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+/* ยืนยันแล้ว - Green/Pink Theme Gradient (Matching Logo/Theme) */
+.status-tab.active[href*="status=ยืนยันแล้ว"] {
+    background: linear-gradient(135deg, #ff7eb3 0%, #ff2d88 100%);
+    box-shadow: 0 4px 15px rgba(255, 126, 179, 0.3);
+}
+
+.status-tab i {
+    font-size: 0.85rem;
 }

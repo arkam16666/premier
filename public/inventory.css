@@ -88,11 +88,11 @@ main {
     to { opacity: 1; }
 }
 
-/* Table Entry Animation - Rows appear together for a faster feel */
+/* Table Entry Animation - Staggered rows */
 .inventory-table tbody tr {
     opacity: 0;
-    transform: translateY(15px);
-    animation: entryEffect 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    transform: translateY(20px);
+    animation: entryEffect 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 @keyframes entryEffect {
@@ -102,17 +102,37 @@ main {
     }
 }
 
-/* Removed staggered delays as per user request to load together */
+/* Staggered Delays for Rows (up to 20 rows) */
+.inventory-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
+.inventory-table tbody tr:nth-child(2) { animation-delay: 0.15s; }
+.inventory-table tbody tr:nth-child(3) { animation-delay: 0.2s; }
+.inventory-table tbody tr:nth-child(4) { animation-delay: 0.25s; }
+.inventory-table tbody tr:nth-child(5) { animation-delay: 0.3s; }
+.inventory-table tbody tr:nth-child(6) { animation-delay: 0.35s; }
+.inventory-table tbody tr:nth-child(7) { animation-delay: 0.4s; }
+.inventory-table tbody tr:nth-child(8) { animation-delay: 0.45s; }
+.inventory-table tbody tr:nth-child(9) { animation-delay: 0.5s; }
+.inventory-table tbody tr:nth-child(10) { animation-delay: 0.55s; }
+.inventory-table tbody tr:nth-child(11) { animation-delay: 0.6s; }
+.inventory-table tbody tr:nth-child(12) { animation-delay: 0.65s; }
+.inventory-table tbody tr:nth-child(13) { animation-delay: 0.7s; }
+.inventory-table tbody tr:nth-child(14) { animation-delay: 0.75s; }
+.inventory-table tbody tr:nth-child(15) { animation-delay: 0.8s; }
+.inventory-table tbody tr:nth-child(16) { animation-delay: 0.85s; }
+.inventory-table tbody tr:nth-child(17) { animation-delay: 0.9s; }
+.inventory-table tbody tr:nth-child(18) { animation-delay: 0.95s; }
+.inventory-table tbody tr:nth-child(19) { animation-delay: 1.0s; }
+.inventory-table tbody tr:nth-child(20) { animation-delay: 1.05s; }
 
-/* Enhanced Row Hover - Remove scale (zoom) */
+/* Enhanced Row Hover - Fix shifting by using transparent border by default */
 .inventory-table tr {
-    transition: all 0.3s ease;
-    border-left: 0 solid #ff7eb3;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent; /* Fixed width to prevent shifting */
 }
 
 .inventory-table tr:hover {
     background-color: rgba(255, 255, 255, 0.05);
-    border-left: 4px solid #ff7eb3;
+    border-left-color: #ff7eb3; /* Only change color, not width */
 }
 
 .inventory-table tr:hover td {

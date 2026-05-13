@@ -40,11 +40,17 @@ app.use((req, res, next) => {
     next();
 });
 const authReadonly = new google.auth.GoogleAuth({
-    keyFile: "./striped-buckeye-485807-t7-f6b5b7ca48b8.json",
+    credentials: {
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, '\n'),
+    },
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
 });
 const authWrite = new google.auth.GoogleAuth({
-    keyFile: "./striped-buckeye-485807-t7-f6b5b7ca48b8.json",
+    credentials: {
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, '\n'),
+    },
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 const sheets = google.sheets({ version: "v4", auth: authReadonly });
@@ -224,11 +230,75 @@ app.get("/api/sheets", async (req, res) => {
     }
 });
 
-app.get('/', (req, res) => {
-    res.render('index', {
-        title: 'หน้าแรก',
-        name: 'Thanadon'
-    });
+app.get('/', async (req, res) => {
+    try {
+        const salesPr = await getsheet(null, 'Sale_pr');
+        const salesSo = await getsheet(null, 'sales_so');
+        const stock = await getsheet(null, 'stock');
+
+        // 1. คำนวณยอดขายรวม
+        let totalRevenue = 0;
+        salesSo.forEach(row => {
+            const total = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
+            if (!isNaN(total)) totalRevenue += total;
+        });
+
+        // 2. ข้อมูลสำหรับกราฟเส้น (ยอดขายรายเดือน - ย้อนหลัง 6 เดือน)
+        const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        const monthlySales = Array(12).fill(0);
+        
+        salesSo.forEach(row => {
+            const dateStr = row['วันที่']; // สมมติรูปแบบ "DD/MM/YYYY" หรือใกล้เคียง
+            if (dateStr) {
+                const parts = dateStr.split('/');
+                if (parts.length >= 2) {
+                    const monthIdx = parseInt(parts[1]) - 1;
+                    const total = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
+                    if (!isNaN(total) && monthIdx >= 0 && monthIdx < 12) {
+                        monthlySales[monthIdx] += total;
+                    }
+                }
+            }
+        });
+
+        // 3. ข้อมูลสำหรับกราฟวงกลม (สถานะออเดอร์)
+        const statusCounts = {
+            'confirmed': salesPr.filter(r => ['สำเร็จ', 'ยืนยันแล้ว'].includes((r['สถานะเอกสาร'] || '').trim())).length,
+            'pending': salesPr.filter(r => !['สำเร็จ', 'ยืนยันแล้ว'].includes((r['สถานะเอกสาร'] || '').trim())).length
+        };
+
+        const pendingOrders = statusCounts.pending;
+        const lowStockItems = stock.filter(row => {
+            const qty = parseFloat(row['จำนวน'] || 0);
+            return qty > 0 && qty < 10;
+        }).length;
+
+        const recentSales = salesPr.slice(-5).reverse();
+
+        res.render('index', {
+            title: 'Dashboard',
+            stats: {
+                totalRevenue: totalRevenue.toLocaleString(),
+                pendingOrders: pendingOrders,
+                lowStockCount: lowStockItems,
+                totalProducts: stock.length
+            },
+            chartData: {
+                labels: monthNames,
+                sales: monthlySales,
+                status: [statusCounts.confirmed, statusCounts.pending]
+            },
+            recentSales: recentSales
+        });
+    } catch (err) {
+        console.error("Dashboard error:", err);
+        res.render('index', {
+            title: 'Dashboard',
+            stats: { totalRevenue: 0, pendingOrders: 0, lowStockCount: 0, totalProducts: 0 },
+            chartData: { labels: [], sales: [], status: [0, 0] },
+            recentSales: []
+        });
+    }
 });
 
 
@@ -300,19 +370,26 @@ app.get("/edit_sale", async (req, res) => {
 app.get("/sale_pr", async (req, res) => {
     try {
         const data = await getsheet(null, "Sale_pr");
-        const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์"];
+        const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
 
-        // รับค่าค้นหา
         const searchQuery = (req.query.search || "").trim().toLowerCase();
+        const statusFilter = (req.query.status || "ทั้งหมด");
 
-        // 1. กรองคอลัมน์ (ตามโค้ดเดิมของคุณ)
         let filteredData = data.map(row => {
             let obj = {};
-            allowedHeaders.forEach((h) => { if (row[h]) obj[h] = row[h]; });
+            allowedHeaders.forEach((h) => { 
+                const rawVal = (row[h] || "").toString().trim();
+                if (h === 'สถานะเอกสาร') {
+                    // ปรับ Logic การ Map สถานะให้แม่นยำขึ้น (รองรับทั้ง 'สำเร็จ' และ 'ยืนยันแล้ว')
+                    const isConfirmed = ['สำเร็จ', 'ยืนยันแล้ว'].includes(rawVal);
+                    obj[h] = isConfirmed ? 'ยืนยันแล้ว' : 'ยังไม่ยืนยัน';
+                } else {
+                    obj[h] = rawVal;
+                }
+            });
             return obj;
         }).filter(obj => Object.keys(obj).length > 0);
 
-        // 2. กรองข้อมูลตามคำค้นหา (ค้นหาจากทุกคอลัมน์ที่มีใน allowedHeaders)
         if (searchQuery) {
             filteredData = filteredData.filter(item => {
                 return Object.values(item).some(val =>
@@ -321,10 +398,14 @@ app.get("/sale_pr", async (req, res) => {
             });
         }
 
-        // ส่งกลับไปที่หน้า sale_pr.ejs
+        if (statusFilter !== "ทั้งหมด") {
+            filteredData = filteredData.filter(item => item['สถานะเอกสาร'] === statusFilter);
+        }
+
         res.render("sale_pr", {
             data: filteredData,
-            search: req.query.search || "" // ต้องส่งตัวนี้กลับไปด้วยเสมอ
+            search: req.query.search || "",
+            currentStatus: statusFilter
         });
 
     } catch (err) {
@@ -878,6 +959,7 @@ app.post("/api/confirm-webhook", async (req, res) => {
         // 3. Find or add header columns
         let dateColIndex = headers.indexOf("วันที่แก้ไขล่าสุด");
         let editorColIndex = headers.indexOf("ผู้แก้ไขล่าสุด");
+        let statusColIndex = headers.indexOf("สถานะเอกสาร");
 
         let headersChanged = false;
         if (dateColIndex === -1) {
@@ -890,10 +972,15 @@ app.post("/api/confirm-webhook", async (req, res) => {
             headers.push("ผู้แก้ไขล่าสุด");
             headersChanged = true;
         }
+        if (statusColIndex === -1) {
+            statusColIndex = headers.length;
+            headers.push("สถานะเอกสาร");
+            headersChanged = true;
+        }
 
         // 4. Update headers if new columns were added
         if (headersChanged) {
-            console.log("Updating sheet headers...");
+            console.log("Updating sheet headers to include missing columns...");
             await sheetsWrite.spreadsheets.values.update({
                 spreadsheetId: process.env.GOOGLE_SHEET_ID,
                 range: `${sheetName}!A1`,
@@ -904,13 +991,15 @@ app.post("/api/confirm-webhook", async (req, res) => {
 
         // 5. Update the target row
         const currentRow = [...(allRows[rowIndex] || [])];
-        while (currentRow.length <= Math.max(dateColIndex, editorColIndex)) {
+        while (currentRow.length <= Math.max(dateColIndex, editorColIndex, statusColIndex)) {
             currentRow.push("");
         }
+
+        currentRow[statusColIndex] = "สำเร็จ";
         currentRow[dateColIndex] = dateStr;
         currentRow[editorColIndex] = userName;
 
-        console.log("Updating record with date and editor...");
+        console.log("Updating record with status 'สำเร็จ', date and editor...");
         await sheetsWrite.spreadsheets.values.update({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
             range: `${sheetName}!A${rowIndex + 1}`,
@@ -918,7 +1007,10 @@ app.post("/api/confirm-webhook", async (req, res) => {
             requestBody: { values: [currentRow] },
         });
 
-        console.log(`ยืนยัน ID: ${id} โดย ${userName} เวลา ${dateStr}`);
+        // ล้าง Cache เพื่อให้หน้าเว็บอัปเดตทันที
+        sheetCache.delete(`${sheetName}_all`);
+
+        console.log(`ยืนยัน ID: ${id} และเปลี่ยนสถานะเป็น 'สำเร็จ' โดย ${userName} เวลา ${dateStr}`);
 
         // 6. Call the webhook
         const typeColIndex = headers.indexOf("ประเภทธุรกรรม");
@@ -1432,6 +1524,79 @@ app.post("/api/delete_order_so", async (req, res) => {
     } catch (error) {
         console.error("Error deleting SO order:", error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// AI Chat Routes
+app.get('/ai_chat', requireLogin, (req, res) => {
+    res.render('ai_chat');
+});
+
+app.post('/api/chat', requireLogin, async (req, res) => {
+    const userMessage = req.body.message;
+    if (!userMessage) return res.status(400).json({ error: 'Message is required' });
+
+    try {
+        // Fetch data for RAG
+        const stock = await getsheet(null, 'stock');
+        const salesPr = await getsheet(null, 'Sale_pr');
+        const salesSo = await getsheet(null, 'sales_so');
+
+        const contextData = {
+            inventory: stock.map(s => ({ code: s['รหัส'], name: s['ชื่อ'], qty: s['จำนวน'], unit: s['หน่วย'] })),
+            recent_sales_pr: salesPr.slice(-10).map(s => ({ id: s['id'], date: s['วันที่'], customer: s['ลูกค้า-ผู้ขาย'], status: s['สถานะเอกสาร'] })),
+            recent_sales_so: salesSo.slice(-10).map(s => ({ id: s['id'], date: s['วันที่'], customer: s['ลูกค้า-ผู้ขาย'], total: s['จำนวนเงินรวม'] }))
+        };
+
+        const systemPrompt = `คุณคือ "พี่ AI" ผู้ช่วยอัจฉริยะที่ดูแลระบบ ERP ของพรีเมียร์ (Premier) 
+บุคลิกของคุณคือ: เป็นกันเอง, สุภาพ, มีความเป็นมืออาชีพเหมือนพี่ที่คอยช่วยเหลือดูแลน้องๆ ในออฟฟิศ
+
+ข้อมูลในระบบที่พี่หามาให้ (Context):
+${JSON.stringify(contextData)}
+
+แนวทางการตอบของพี่:
+1. ใช้ภาษาไทยที่เป็นธรรมชาติ (เช่น ใช้คำว่า "พี่เช็คให้แล้วครับ/ค่ะ", "มีรายการน่าสนใจคือ...", "ตรงนี้พี่แนะนำว่า...") 
+2. แทนตัวเองว่า "พี่" หรือ "ผม/ดิฉัน" ตามความเหมาะสม (ในที่นี้ให้ใช้ "พี่ AI" เป็นหลัก)
+3. การสรุปข้อมูล: ไม่ตอบเป็นตารางแห้งๆ ให้เล่าเหมือนพี่สรุปให้น้องฟัง เช่น
+   - "ตอนนี้ในคลังมีของที่ต้องรีบเติมอยู่นะครับ มี 3 รายการคือ..."
+   - "ยอดขายเดือนนี้ดูดีเลยครับ โดยเฉพาะลูกค้ากลุ่ม..."
+4. ถ้าไม่เจอข้อมูล: ให้บอกแบบพี่ช่วยหา เช่น "พี่ลองหาดูแล้วยังไม่เจอข้อมูลตรงนี้เลยครับ น้องลองเช็คชื่อสะกดอีกทีไหม?"
+5. ความลับข้อมูล: ยังคงรักษาความลับและไม่แสดง JSON ดิบเด็ดขาด
+6. การคำนวณ: สรุปยอดรวมให้เสร็จสรรพ พร้อมบอกแนวโน้มสั้นๆ ถ้าทำได้`;
+
+        const geminiApiKey = process.env.GEMINI_API_KEY;
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiApiKey}`;
+
+        console.log(`[AI] Sending request to Google Gemini API (gemini-flash-latest)`);
+
+        const response = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: `${systemPrompt}\n\nคำถามจากผู้ใช้: ${userMessage}`
+                    }]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Gemini API returned ${response.status}: ${errorText}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+            res.json({ response: result.candidates[0].content.parts[0].text });
+        } else {
+            res.status(500).json({ error: 'Invalid response from Gemini API' });
+        }
+
+    } catch (err) {
+        console.error("[ERROR] AI Chat error:", err.message);
+        res.status(500).json({ error: `ไม่สามารถเชื่อมต่อกับ Gemini AI ได้: ${err.message}` });
     }
 });
 
