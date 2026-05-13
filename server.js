@@ -61,41 +61,68 @@ async function getsheet(id, table) {
     try {
         let data;
         
-        // Check cache if no specific ID is requested
-        if (!id && sheetCache.has(cacheKey)) {
+        if (sheetCache.has(cacheKey)) {
             const cached = sheetCache.get(cacheKey);
             if (now - cached.timestamp < CACHE_TTL) {
-                console.log(`Using cached data for table: ${table}`);
+                console.log(`[DEBUG] Cache hit for ${table}`);
                 data = cached.data;
             }
         }
 
         if (!data) {
+            console.log(`[DEBUG] Fetching fresh data from Google Sheets: ${table}`);
             const result = await sheets.spreadsheets.values.get({
                 spreadsheetId: process.env.GOOGLE_SHEET_ID,
                 range: `${table}!A1:AZ`,
             });
 
-            const [headers, ...rows] = result.data.values ?? [];
-            if (!headers) return [];
-
-            data = rows.map((row) =>
-                Object.fromEntries(headers.map((h, i) => [h, row[i] ?? ""]))
-            );
-
-            // Update cache
-            if (!id) {
-                sheetCache.set(cacheKey, { data, timestamp: now });
+            const rowsRaw = result.data.values ?? [];
+            if (rowsRaw.length === 0) {
+                console.log(`[DEBUG] Sheet ${table} is empty`);
+                return [];
             }
+
+            const [headersRaw, ...rows] = rowsRaw;
+            const headers = headersRaw.map(h => (h || "").toString().trim());
+            console.log(`[DEBUG] Headers for ${table} (trimmed):`, headers);
+
+            data = rows.map((row, rowIndex) => {
+                const obj = {};
+                headers.forEach((h, i) => {
+                    obj[h] = row[i] ?? "";
+                });
+                return obj;
+            });
+
+            sheetCache.set(cacheKey, { data, timestamp: now });
         }
 
         if (id) {
-            return data.filter((row) => row["id"] === id);
+            const searchId = String(id).trim();
+            console.log(`[DEBUG] Attempting to filter ${table} for ID: "${searchId}" (Length: ${searchId.length})`);
+            
+            const filtered = data.filter((row, idx) => {
+                const rawRowId = row["id"] || row["ID"] || row["Id"] || row["รหัส"];
+                const rowId = String(rawRowId).trim();
+                
+                // แก้ไข Logic Bug: ใช้ Suffix Match ป้องกันการเจอข้อมูลผิด (เช่น "1" ไปเจอ "10")
+                const isExactMatch = rowId === searchId;
+                const isSuffixMatch = rowId.endsWith("-" + searchId); // เช่น "so-AS-001" กับ "AS-001"
+                const match = isExactMatch || isSuffixMatch;
+                
+                if (idx < 5 || match) {
+                    console.log(`   - Row ${idx} ID: "${rawRowId}" -> Match: ${match} (${isExactMatch ? 'Exact' : (isSuffixMatch ? 'Suffix' : 'No')})`);
+                }
+                return match;
+            });
+            console.log(`[DEBUG] Filtered ${table} for ID ${id}: found ${filtered.length} matches`);
+            return filtered;
         }
 
+        console.log(`[DEBUG] Returning all ${data.length} rows for ${table}`);
         return data;
     } catch (err) {
-        console.error("Error fetching sheet:", err.message);
+        console.error(`[ERROR] getsheet (${table}):`, err.message);
         return [];
     }
 }
@@ -381,6 +408,8 @@ app.get("/delsale", async (req, res) => {
                 spreadsheetId,
                 requestBody: { requests },
             });
+            sheetCache.delete("Sale_pr_all");
+            sheetCache.delete("sub_sales_pr_all");
         }
 
         console.log(`ลบข้อมูล ID: ${idToDelete} สำเร็จ`);
@@ -1127,6 +1156,282 @@ app.post('/add_sale', async (req, res) => {
     } catch (err) {
         console.error("Error in add_sale proxy:", err);
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get("/edit_sale_so", async (req, res) => {
+    const idToEdit = req.query.id;
+    const searchQuery = (req.query.search || "").trim().toLowerCase();
+
+    try {
+        const subSalesData = await getsheet(idToEdit, "sub_sales_so");
+        const salesData = await getsheet(idToEdit, "sales_so");
+        const allProductsRaw = await getsheet(null, "product");
+
+        const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
+        const subSaleHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี", "จำนวนเงินรวม"];
+        const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาขาย", "แบรนด์", "อัตราภาษีขาย"];
+
+        const mapDataByHeaders = (rawData, headers) => {
+            if (!rawData || !headers) return [];
+            return rawData.map(row => {
+                const obj = {};
+                headers.forEach(header => {
+                    obj[header] = row[header] !== undefined ? row[header] : "";
+                });
+                return obj;
+            }).filter(obj => Object.keys(obj).length > 0);
+        };
+
+        let saleSoData = mapDataByHeaders(subSalesData, subSaleHeaders);
+        let orderData = mapDataByHeaders(salesData, saleHeaders);
+        let allProducts = mapDataByHeaders(allProductsRaw, productHeaders);
+
+        if (searchQuery) {
+            saleSoData = saleSoData.filter(item =>
+                Object.values(item).some(val =>
+                    String(val).toLowerCase().includes(searchQuery)
+                )
+            );
+        }
+
+        res.render("edit_sale_so", {
+            data: subSalesData,
+            sale_so: saleSoData,
+            order: orderData,
+            rawSalesData: salesData,
+            allProducts: allProducts,
+            search: req.query.search || "",
+            idToEdit: idToEdit
+        });
+    } catch (err) {
+        console.error("Error in /edit_sale_so:", err);
+        res.status(500).send({ error: err.message });
+    }
+});
+
+app.post("/api/save_changes_so", async (req, res) => {
+    const { id, finalItems, orderChanges } = req.body;
+    if (!id) return res.status(400).json({ error: "ต้องระบุ id" });
+
+    try {
+        const sheetName = "sub_sales_so";
+        const result = await sheetsWrite.spreadsheets.values.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${sheetName}!A1:AZ`,
+        });
+
+        const allRows = result.data.values ?? [];
+        if (allRows.length > 0) {
+            const headers = allRows[0];
+            const idColIndex = headers.indexOf("id");
+
+            if (idColIndex !== -1) {
+                const spreadsheet = await sheetsWrite.spreadsheets.get({
+                    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                });
+                const sheetMeta = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
+                const sheetId = sheetMeta.properties.sheetId;
+
+                const rowsToDelete = [];
+                for (let i = 1; i < allRows.length; i++) {
+                    if ((allRows[i][idColIndex] || "").toString().trim() === id.trim()) {
+                        rowsToDelete.push(i);
+                    }
+                }
+
+                if (rowsToDelete.length > 0) {
+                    rowsToDelete.sort((a, b) => b - a);
+                    const requests = rowsToDelete.map((rowIndex) => ({
+                        deleteDimension: {
+                            range: {
+                                sheetId: sheetId,
+                                dimension: "ROWS",
+                                startIndex: rowIndex,
+                                endIndex: rowIndex + 1,
+                            },
+                        },
+                    }));
+
+                    await sheetsWrite.spreadsheets.batchUpdate({
+                        spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                        requestBody: { requests },
+                    });
+                    sheetCache.delete(`${sheetName}_all`);
+                }
+            }
+        }
+
+        if (finalItems && Array.isArray(finalItems) && finalItems.length > 0) {
+            const values = finalItems.map(p => {
+                const qty = parseFloat(p.quantity) || 0;
+                const price = parseFloat(p['ราคาขาย']) || 0;
+                const taxRateStr = (p['อัตราภาษีขาย'] || "0").toString().replace('%', '');
+                const taxRate = parseFloat(taxRateStr) || 0;
+                const amount = qty * price;
+                const tax = amount * (taxRate / 100);
+                const total = amount + tax;
+
+                return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, total];
+            });
+
+            await sheetsWrite.spreadsheets.values.append({
+                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                range: `${sheetName}!A:J`,
+                valueInputOption: "USER_ENTERED",
+                requestBody: { values }
+            });
+            sheetCache.delete(`${sheetName}_all`);
+        }
+
+        // Update Main Order (sales_so)
+        const saleSheetName = "sales_so";
+        const user = req.session.user;
+        const userName = user ? (user['ชื่อภาษาอังกฤษpic'] || 'Unknown') : 'Unknown';
+        const now = new Date();
+        const dateStr = now.toLocaleString('th-TH', {
+            timeZone: 'Asia/Bangkok',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        const saleResult = await sheetsWrite.spreadsheets.values.get({
+            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            range: `${saleSheetName}!A1:AZ`,
+        });
+
+        const saleRows = saleResult.data.values ?? [];
+        if (saleRows.length > 0) {
+            const saleHeaders = saleRows[0];
+            const saleIdCol = saleHeaders.indexOf("id");
+            const saleDateCol = saleHeaders.indexOf("วันที่แก้ไขล่าสุด");
+            const saleEditorCol = saleHeaders.indexOf("ผู้แก้ไขล่าสุด");
+
+            if (saleIdCol !== -1) {
+                let saleRowIndex = -1;
+                for (let i = 1; i < saleRows.length; i++) {
+                    if ((saleRows[i][saleIdCol] || "").toString().trim() === id.trim()) {
+                        saleRowIndex = i;
+                        break;
+                    }
+                }
+
+                if (saleRowIndex !== -1) {
+                    const saleRow = [...(saleRows[saleRowIndex] || [])];
+                    if (orderChanges && typeof orderChanges === 'object') {
+                        for (let j = 0; j < saleHeaders.length; j++) {
+                            const header = saleHeaders[j];
+                            if (orderChanges.hasOwnProperty(header)) {
+                                while (saleRow.length <= j) saleRow.push("");
+                                saleRow[j] = orderChanges[header];
+                            }
+                        }
+                    }
+                    if (saleDateCol !== -1) {
+                        while (saleRow.length <= saleDateCol) saleRow.push("");
+                        saleRow[saleDateCol] = dateStr;
+                    }
+                    if (saleEditorCol !== -1) {
+                        while (saleRow.length <= saleEditorCol) saleRow.push("");
+                        saleRow[saleEditorCol] = userName;
+                    }
+
+                    await sheetsWrite.spreadsheets.values.update({
+                        spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                        range: `${saleSheetName}!A${saleRowIndex + 1}`,
+                        valueInputOption: "USER_ENTERED",
+                        requestBody: { values: [saleRow] },
+                    });
+                    sheetCache.delete(`${saleSheetName}_all`);
+                }
+            }
+        }
+
+        res.json({ success: true, message: "บันทึกการเปลี่ยนแปลงทั้งหมดเรียบร้อยแล้ว" });
+    } catch (err) {
+        console.error("Error saving SO changes:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get("/sale_so", async (req, res) => {
+    try {
+        const data = await getsheet(null, "sales_so");
+        const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์"];
+
+        // รับค่าค้นหา
+        const searchQuery = (req.query.search || "").trim().toLowerCase();
+
+        // 1. กรองคอลัมน์
+        let filteredData = data.map(row => {
+            let obj = {};
+            allowedHeaders.forEach((h) => { if (row[h]) obj[h] = row[h]; });
+            return obj;
+        }).filter(obj => Object.keys(obj).length > 0);
+
+        // 2. กรองข้อมูลตามคำค้นหา
+        if (searchQuery) {
+            filteredData = filteredData.filter(item => {
+                return Object.values(item).some(val =>
+                    String(val).toLowerCase().includes(searchQuery)
+                );
+            });
+        }
+
+        // ส่งกลับไปที่หน้า sale_so.ejs
+        res.render("sale_so", {
+            data: filteredData,
+            search: req.query.search || ""
+        });
+
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.post("/api/delete_order_so", async (req, res) => {
+    const idToDelete = req.query.id;
+    if (!idToDelete) return res.status(400).json({ error: "ไม่พบ ID ที่ต้องการลบ" });
+
+    try {
+        const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+        const spreadsheet = await sheetsWrite.spreadsheets.get({ spreadsheetId });
+        const salesSoSheet = spreadsheet.data.sheets.find(s => s.properties.title === "sales_so");
+        const subSalesSoSheet = spreadsheet.data.sheets.find(s => s.properties.title === "sub_sales_so");
+
+        if (!salesSoSheet || !subSalesSoSheet) return res.status(500).json({ error: "ไม่พบ Sheet ที่ต้องการ" });
+
+        const salesSoRes = await sheetsWrite.spreadsheets.values.get({ spreadsheetId, range: "sales_so!A:A" });
+        const salesSoRows = salesSoRes.data.values || [];
+        const salesSoIndex = salesSoRows.findIndex(row => (row[0] || "").toString().trim() === idToDelete.trim());
+
+        const subSalesSoRes = await sheetsWrite.spreadsheets.values.get({ spreadsheetId, range: "sub_sales_so!A:A" });
+        const subSalesSoRows = subSalesSoRes.data.values || [];
+        const subSalesSoIndices = [];
+        subSalesSoRows.forEach((row, index) => {
+            if ((row[0] || "").toString().trim() === idToDelete.trim()) subSalesSoIndices.push(index);
+        });
+
+        const requests = [];
+        if (subSalesSoIndices.length > 0) {
+            subSalesSoIndices.sort((a, b) => b - a).forEach(index => {
+                requests.push({ deleteDimension: { range: { sheetId: subSalesSoSheet.properties.sheetId, dimension: "ROWS", startIndex: index, endIndex: index + 1 } } });
+            });
+        }
+        if (salesSoIndex !== -1) {
+            requests.push({ deleteDimension: { range: { sheetId: salesSoSheet.properties.sheetId, dimension: "ROWS", startIndex: salesSoIndex, endIndex: salesSoIndex + 1 } } });
+        }
+
+        if (requests.length > 0) {
+            await sheetsWrite.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
+            sheetCache.delete("sales_so_all");
+            sheetCache.delete("sub_sales_so_all");
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error deleting SO order:", error);
+        res.status(500).json({ error: error.message });
     }
 });
 

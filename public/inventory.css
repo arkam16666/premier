@@ -48,6 +48,10 @@
     animation: spin-reverse 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
 }
 
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 @keyframes spin-reverse {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(-360deg); }
@@ -64,91 +68,111 @@
     text-shadow: 0 0 10px rgba(255, 126, 179, 0.5);
 }
 
-/* Advanced Table Entry Animation */
+/* Main Content Entrance - Remove scale (zoom) */
+main {
+    animation: mainFadeIn 0.8s cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+@keyframes mainFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Table Override to remove scaleIn from sale_pr.css */
+.inventory-table {
+    animation: fadeInOnly 0.5s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both !important;
+}
+
+@keyframes fadeInOnly {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Table Entry Animation - Rows appear together for a faster feel */
 .inventory-table tbody tr {
     opacity: 0;
-    transform: translateY(30px) scale(0.98);
-    animation: entryEffect 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transform: translateY(15px);
+    animation: entryEffect 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes entryEffect {
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateY(0);
     }
 }
 
-/* Generate staggered delays for rows (more refined) */
-.inventory-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
-.inventory-table tbody tr:nth-child(2) { animation-delay: 0.15s; }
-.inventory-table tbody tr:nth-child(3) { animation-delay: 0.2s; }
-.inventory-table tbody tr:nth-child(4) { animation-delay: 0.25s; }
-.inventory-table tbody tr:nth-child(5) { animation-delay: 0.3s; }
-.inventory-table tbody tr:nth-child(6) { animation-delay: 0.35s; }
-.inventory-table tbody tr:nth-child(7) { animation-delay: 0.4s; }
-.inventory-table tbody tr:nth-child(8) { animation-delay: 0.45s; }
-.inventory-table tbody tr:nth-child(9) { animation-delay: 0.5s; }
-.inventory-table tbody tr:nth-child(10) { animation-delay: 0.55s; }
+/* Removed staggered delays as per user request to load together */
 
-/* Enhanced Row Hover */
+/* Enhanced Row Hover - Remove scale (zoom) */
+.inventory-table tr {
+    transition: all 0.3s ease;
+    border-left: 0 solid #ff7eb3;
+}
+
+.inventory-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left: 4px solid #ff7eb3;
+}
+
 .inventory-table tr:hover td {
-    background-color: rgba(255, 255, 255, 0.08) !important;
     color: #ff7eb3 !important;
-    box-shadow: inset 0 0 15px rgba(255, 126, 179, 0.1);
+}
+
+.inventory-table td {
     transition: all 0.3s ease;
 }
 
-.inventory-table tr td {
-    transition: all 0.3s ease;
+/* Search Bar Pulse Animation on Focus */
+.search-input {
+    transition: all 0.4s cubic-bezier(0.2, 0, 0.2, 1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-/* Status Badges with Pulse */
-.status-badge {
-    padding: 6px 14px;
-    border-radius: 30px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+.search-input:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(255, 126, 179, 0.15);
+    border-color: #ff7eb3;
+}
+
+/* Manage Button Hover */
+.inventory-table a {
     display: inline-block;
+    color: #a786ff;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.inventory-table a:hover {
+    color: #ff7eb3;
+    transform: scale(1.3) rotate(15deg);
+    text-shadow: 0 0 10px rgba(255, 126, 179, 0.5);
+}
+
+/* Stock Pulse for Low Stock */
+.low-stock {
+    animation: pulseStock 2s infinite;
+}
+
+@keyframes pulseStock {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; transform: scale(1.05); }
+    100% { opacity: 1; }
+}
+
+/* Button Animations */
+.btn-search, .btn-clear {
     position: relative;
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 
-.status-badge::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    animation: shine 2s infinite;
+.btn-search:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 126, 179, 0.4);
 }
 
-@keyframes shine {
-    to { left: 200%; }
-}
-
-.status-in-stock {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
-}
-
-.status-low-stock {
-    background: rgba(245, 158, 11, 0.1);
-    color: #f59e0b;
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
-}
-
-.status-out-of-stock {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+.btn-search:active {
+    transform: translateY(0);
 }
 
 @media (max-width: 768px) {

@@ -52,7 +52,7 @@
     </aside>
 
     <main style="padding: 20px;">
-        <h1 style="color: #ff7eb3; margin-bottom: 20px;"><i class="fas fa-boxes"></i> รายการสินค้าในคลัง</h1>
+        <h1 class="page-title" style="color: #ff7eb3; margin-bottom: 20px;"><i class="fas fa-boxes"></i> รายการสินค้าในคลัง</h1>
         
         <form action="/inventory" method="GET" class="search-container">
             <input type="text" name="search" class="search-input" value="<%= search %>" placeholder="ค้นหาชื่อสินค้า, รหัส หรือแบรนด์...">
@@ -74,21 +74,26 @@
                             <th>จำนวน</th>
                             <th>หน่วย</th>
                             <th>แบรนด์</th>
-                            <th>จัดการ</th>
+                            <th style="text-align: center;">จัดการ</th>
                         <% } %>
                     </tr>
                 </thead>
                 <tbody>
                     <% if (data && data.length > 0) { %>
-                        <% data.forEach(row => { %>
+                        <% data.forEach(row => { 
+                            const stockQty = parseFloat(row['จำนวน']) || 0;
+                            const isLowStock = stockQty > 0 && stockQty < 10;
+                        %>
                             <tr>
                                 <td><%= row['รหัส'] %></td>
                                 <td style="white-space: normal; min-width: 200px;"><%= row['ชื่อ'] %></td>
-                                <td style="font-weight: bold; color: #a786ff;"><%= row['จำนวน'] %></td>
+                                <td style="font-weight: bold; color: #a786ff;" class="<%= isLowStock ? 'low-stock' : '' %>">
+                                    <%= row['จำนวน'] %>
+                                </td>
                                 <td><%= row['หน่วย'] %></td>
                                 <td><%= row['แบรนด์'] %></td>
                                 <td style="text-align: center;">
-                                    <a href="#"><i class="fas fa-pencil"></i></a>
+                                    <a href="#" class="action-icon"><i class="fas fa-pencil"></i></a>
                                 </td>
                             </tr>
                         <% }) %>

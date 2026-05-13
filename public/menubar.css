@@ -75,12 +75,12 @@
     animation: slideInLeft 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
-/* ===== Logo ===== */
+/* ===== Logo - Remove scale (zoom) and use fadeInUp ===== */
 .logo {
-    animation: scaleIn 0.5s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    animation: fadeInUp 0.5s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
-/* ===== Menu Links ===== */
+/* ===== Menu Links - All appear together (Remove staggered delays) ===== */
 .menu a {
     display: flex;
     align-items: center;
@@ -91,23 +91,20 @@
     border-radius: 12px;
     transition: all 0.3s ease;
 
-    /* Animation: ค่อยๆ โผล่ทีละปุ่ม (stagger) */
+    /* Animation: All links fade in together */
     opacity: 0;
-    animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    animation: fadeInUp 0.4s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
-.menu a:nth-child(1) { animation-delay: 0.1s; }
-.menu a:nth-child(2) { animation-delay: 0.2s; }
-.menu a:nth-child(3) { animation-delay: 0.3s; }
-.menu a:nth-child(4) { animation-delay: 0.4s; }
-.menu a:nth-child(5) { animation-delay: 0.5s; }
-
-/* ปุ่มที่ถูกเลือก (Active) ให้มีสี Gradient แบบในรูป */
+/* ปุ่มที่ถูกเลือก (Active) ให้มีสี Gradient และรวม Animation ทั้งคู่ */
 .menu a.active {
     background: linear-gradient(90deg, #ff7eb3, #a786ff);
     color: white !important;
     box-shadow: 0 4px 15px rgba(167, 134, 255, 0.4);
-    animation: glowPulse 3s 1.5s ease-in-out infinite;
+    /* รวม fadeInUp และ glowPulse เข้าด้วยกัน */
+    animation: 
+        fadeInUp 0.4s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both,
+        glowPulse 3s 1.5s ease-in-out infinite;
     opacity: 1 !important;
 }
 

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="menubar.css">
+    <link rel="stylesheet" href="edit_sale.css">
+    <link rel="stylesheet" href="model.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>แก้ไข Sale SO</title>
+    <style>
+        /* Pretty Quantity Input */
+        .item-qty {
+            width: 70px;
+            padding: 8px 5px;
+            border-radius: 10px;
+            border: 1px solid rgba(167, 134, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .item-qty:focus {
+            border-color: #ff7eb3;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(255, 126, 179, 0.3);
+            transform: scale(1.05);
+        }
+
+        /* Hide Spinners */
+        .item-qty::-webkit-inner-spin-button,
+        .item-qty::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .pending-add {
+            background-color: rgba(144, 238, 144, 0.1) !important;
+        }
+        
+        .item-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #ff7eb3;
+        }
+
+        .text-right {
+            text-align: right !important;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>ระบบ ERP</h2>
+            <span>ระดับจงกร</span><br>
+        </div>
+
+        <nav class="menu">
+            <a href="<%= baseUrl %>/">Dashboard</a>
+            <a href="<%= baseUrl %>/add_sale">เพิ่มออเดอร์</a>
+            <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
+            <a href="<%= baseUrl %>/sale_so" class="active">Sale SO</a>
+            <a href="#">เสนอซื้อ</a>
+            <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
+        </nav>
+        <div
+            style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="color: #a0a0b5; margin-bottom: 10px; font-size: 0.9rem;">
+                <i class="fas fa-user-circle"></i>
+                <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
+            </div>
+            <a href="<%= baseUrl %>/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+            </a>
+        </div>
+    </aside>
+    <main style="padding: 20px;">
+
+
+        <% if (order && order.length> 0) { %>
+            <h1>แก้ไขข้อมูล Sale SO สำหรับ <%= order[0]['ลูกค้า-ผู้ขาย'] %>
+            </h1>
+            <% } else { %>
+                <h1>แก้ไขข้อมูล Sale SO</h1>
+                <% } %>
+                    <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <% if (order && order.length> 0) { %>
+                                        <% Object.keys(order[0]).forEach(h=> { %>
+                                            <th>
+                                                <%= h %>
+                                            </th>
+                                            <% }) %>
+                                                <th style="text-align: center;">จัดการ</th>
+                                                <% } %>
+                                </tr>
+                            </thead>
+                            <tbody class="order">
+                                <% if (order && order.length> 0) { %>
+                                    <% order.forEach(row=> { %>
+                                        <tr>
+                                            <% Object.values(row).forEach(val=> { %>
+                                                <td>
+                                                    <%= val %>
+
+                                                </td>
+                                                <% }) %>
+                                                    <td style="text-align: center;">
+                                                        <a href="#" onclick="openOrderModal(event)">
+                                                            <i class="fas fa-pencil"> </i>
+                                                        </a>
+                                                    </td>
+                                        </tr>
+                                        <% }) } else { %>
+                                            <tr>
+                                                <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                                            </tr>
+                                            <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <form action="/edit_sale_so" method="GET" class="search-form">
+                        <input type="hidden" name="id" value="<%= idToEdit %>">
+                        <div class="search-input-group">
+                            <i class="fas fa-search"></i>
+                            <input type="text" name="search" value="<%= search %>" placeholder="ค้นหาชื่อสินค้า"
+                                class="search-input">
+                        </div>
+                        <button type="submit" class="btn-search">
+                            <i class="fas fa-search"></i> ค้นหา
+                        </button>
+                        <a href="/sale_so" class="btn-clear">
+                            <i class="fas fa-sync-alt"></i> ล้างค่า
+                        </a>
+                    </form>
+
+                    <div class="table-responsive items-table-container" style="overflow-x: auto; width: 100%;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="text-center"><i class="fas fa-check-square"></i></th>
+                                    <th>สินค้า</th>
+                                    <th>ชื่อสินค้า</th>
+                                    <th>ข้อมูลจำเพราะ</th>
+                                    <th class="text-center">จำนวน</th>
+                                    <th>หน่วย</th>
+                                    <th class="text-right">ราคาต่อหน่วย</th>
+                                    <th class="text-right">จำนวนเงิน</th>
+                                    <th class="text-right">ภาษี</th>
+                                    <th class="text-right">จำนวนเงินรวม</th>
+                                </tr>
+                            </thead>
+                            <tbody id="saleSoBody">
+                                <% if (sale_so && sale_so.length> 0) { %>
+                                    <% sale_so.forEach(row=> { %>
+                                        <tr class="item-row" data-product="<%= row['สินค้า'] %>">
+                                            <td class="text-center">
+                                                <input type="checkbox" class="item-checkbox">
+                                            </td>
+                                            <td><%= row['สินค้า'] %></td>
+                                            <td><%= row['ชื่อสินค้า'] %></td>
+                                            <td><%= row['ข้อมูลจำเพราะ'] %></td>
+                                            <td class="text-center">
+                                                <input type="number" class="item-qty" min="0" step="any" value="<%= row['จำนวน'] %>">
+                                            </td>
+                                            <td><%= row['หน่วย'] %></td>
+                                            <td class="text-right"><%= row['ราคาต่อหน่วย'] %></td>
+                                            <td class="text-right"><%= row['จำนวนเงิน'] %></td>
+                                            <td class="text-right"><%= row['ภาษี'] %></td>
+                                            <td class="item-total text-right"><%= row['จำนวนเงินรวม'] %></td>
+                                        </tr>
+                                    <% }) } else { %>
+                                        <tr>
+                                            <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                                        </tr>
+                                    <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="btn">
+                        <button type="button" id="btnSaveChanges" onclick="saveChanges()">ยืนยัน</button>
+                        <button type="button" id="btnprint" onclick="printPDF()">พิมพ์</button>
+                        <div class="add">
+                            <button type="button" class="btn-add" onclick="openModal()">
+                                <i class="fas fa-plus"></i> เพิ่ม
+                            </button>
+
+                            <script>
+                                // ข้อมูลพื้นฐานที่จำเป็นสำหรับ Modal และการบันทึก
+                                var allProducts = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(allProducts || [])) %>'));
+                                var rawSubSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
+                                var rawOrderData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(order || [])) %>'));
+                                var rawSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawSalesData || [])) %>'));
+                                var currentEditId = '<%= idToEdit %>';
+                                var pendingOrderChanges = null; 
+                                var sheetName = 'sub_sales_so';
+                                var mainSheetName = 'sales_so';
+                            </script>
+                            <script src="model.js"></script>
+                            <button type="button" id="btnSoftDelete" onclick="softDelete()">ลบ</button>
+                        </div>
+                    </div>
+    </main>
+
+    <%- include('modal.ejs') %>
+    <%- include('order_modal.ejs') %>
+
+    <script>
+        // ฟังก์ชันลบแบบเลือก Checkbox
+        function softDelete() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('กรุณาเลือกรายการที่ต้องการลบ');
+                return;
+            }
+
+            if (confirm(`ยืนยันการลบ ${checkboxes.length} รายการที่เลือก?`)) {
+                checkboxes.forEach(cb => {
+                    const row = cb.closest('tr');
+                    row.style.display = 'none';
+                    row.querySelector('.item-qty').value = 0;
+                    cb.checked = false;
+                });
+            }
+        }
+
+        function saveChanges() {
+            const rows = document.querySelectorAll('#saleSoBody .item-row');
+            const finalItems = [];
+
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const productCode = row.getAttribute('data-product');
+                
+                if (row.style.display !== 'none' && qty > 0) {
+                    const productInfo = allProducts.find(p => p['รหัส'] === productCode);
+                    if (productInfo) {
+                        finalItems.push({
+                            ...productInfo,
+                            quantity: qty
+                        });
+                    }
+                }
+            });
+
+            if (finalItems.length === 0 && !pendingOrderChanges) {
+                alert('ไม่มีรายการที่เปลี่ยนแปลง หรือไม่มีสินค้าเหลือในรายการ');
+                return;
+            }
+
+            if (!confirm('ยืนยันการบันทึกการเปลี่ยนแปลงทั้งหมด?')) {
+                return;
+            }
+
+            fetch('/api/save_changes_so', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: currentEditId,
+                    finalItems: finalItems,
+                    orderChanges: pendingOrderChanges
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert('เกิดข้อผิดพลาด: ' + data.error);
+                    return;
+                }
+                alert('บันทึกสำเร็จ!');
+                setTimeout(() => { window.location.reload(); }, 1000);
+            })
+            .catch(err => {
+                console.error('Save error:', err);
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+            });
+        }
+
+        async function printPDF() {
+            const rows = document.querySelectorAll('#saleSoBody .item-row');
+            const itemsList = [];
+
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                    if (qty > 0) {
+                        itemsList.push({
+                            'sku': row.cells[1].innerText,
+                            'productName': row.cells[2].innerText,
+                            'info': row.cells[3].innerText,
+                            'qty': qty,
+                            'unit': row.cells[5].innerText,
+                            'unitPrice': parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0,
+                            'amount': parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0,
+                            'vat': parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0,
+                            'total': parseFloat(row.cells[9].innerText.replace(/,/g, '')) || 0
+                        });
+                    }
+                }
+            });
+
+            if (itemsList.length === 0) {
+                alert('ไม่มีรายการสินค้าสำหรับสั่งพิมพ์');
+                return;
+            }
+
+            const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+            const totalVat = itemsList.reduce((sum, item) => sum + (item.vat || 0), 0);
+            const grandTotal = itemsList.reduce((sum, item) => sum + (item.total || 0), 0);
+            
+            const payload = {
+                items: [{
+                    id: currentEditId,
+                    orderDate: headerData['วันที่'] || '',
+                    picName: headerData['PIC'] || '',
+                    sellerName: headerData['ลูกค้า-ผู้ขาย'] || '',
+                    note: headerData['โทรศัพท์'] || '',
+                    picDepartment: '',
+                    title: 'Sale Order (SO)',
+                    vat: Number(totalVat.toFixed(2)),
+                    grandTotal: Number(grandTotal.toFixed(2)),
+                    items: itemsList
+                }]
+            };
+
+            const btn = document.getElementById('btnprint');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังเตรียมไฟล์...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/generate-pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errResult = await response.json();
+                    throw new Error(errResult.error || 'PDF Generation failed');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Sale_Order_SO_${currentEditId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error('Print error:', err);
+                alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // --- Logic สำหรับ Order Modal ---
+        const readOnlyFields = ["id", "วันที่สร้าง", "ผู้สร้าง", "ผู้แก้ไขล่าสุด", "วันที่สร้าง", "วันที่แก้ไขล่าสุด", "สถานะเอกสาร", "PIC", "วันที่"];
+        var orderFields = [];
+
+        function openOrderModal(e) {
+            if (e) e.preventDefault();
+            const grid = document.getElementById('orderFormGrid');
+            grid.innerHTML = '';
+
+            const currentData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+            orderFields = Object.keys(currentData);
+
+            orderFields.forEach(field => {
+                const val = currentData[field] || '';
+                const isReadOnly = readOnlyFields.includes(field);
+
+                const group = document.createElement('div');
+                group.className = 'order-form-group';
+
+                const label = document.createElement('label');
+                label.innerText = field;
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'edit_order_' + field;
+                input.value = val;
+                if (isReadOnly) {
+                    input.readOnly = true;
+                }
+
+                group.appendChild(label);
+                group.appendChild(input);
+                grid.appendChild(group);
+            });
+
+            document.getElementById('orderModal').style.display = 'flex';
+        }
+
+        function closeOrderModal() {
+            document.getElementById('orderModal').style.display = 'none';
+        }
+
+        function saveOrderDetails() {
+            var updatedData = {};
+            orderFields.forEach(function (field) {
+                var input = document.getElementById('edit_order_' + field);
+                if (input && !input.readOnly) {
+                    updatedData[field] = input.value;
+                }
+            });
+
+            pendingOrderChanges = updatedData;
+
+            if (rawSalesData.length > 0) {
+                Object.keys(updatedData).forEach(function (key) {
+                    rawSalesData[0][key] = updatedData[key];
+                });
+            }
+            
+            var orderBody = document.querySelector('.order');
+            if (orderBody && rawOrderData.length > 0) {
+                var row = orderBody.querySelector('tr');
+                if (row) {
+                    var cells = row.querySelectorAll('td');
+                    var keys = Object.keys(rawOrderData[0]);
+                    keys.forEach(function (key, i) {
+                        if (cells[i]) cells[i].textContent = rawOrderData[0][key] || '';
+                    });
+                }
+            }
+
+            closeOrderModal();
+            alert('บันทึกการแก้ไขหัวเอกสารแล้ว (กรุณากด "ยืนยัน" อีกครั้งเพื่อบันทึกลงฐานข้อมูล)');
+        }
+    </script>
+</body>
+
+</html>
