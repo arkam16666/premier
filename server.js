@@ -5,6 +5,7 @@ const express = require("express");
 const cors = require("cors");
 const { google } = require("googleapis");
 const path = require("path");
+const fs = require("fs"); // เพิ่ม fs สำหรับอ่านไฟล์
 const app = express();
 
 app.set('view engine', 'ejs');
@@ -234,30 +235,89 @@ app.get('/', async (req, res) => {
     try {
         const salesPr = await getsheet(null, 'Sale_pr');
         const salesSo = await getsheet(null, 'sales_so');
+        const subSalesSo = await getsheet(null, 'sub_sales_so');
+        const precherPo = await getsheet(null, 'precher_po'); // เพิ่มการดึงข้อมูล precher_po
+        const subPrecherPo = await getsheet(null, 'sub_precher_po'); // เพิ่มการดึงข้อมูล sub_precher_po
         const stock = await getsheet(null, 'stock');
 
-        // 1. คำนวณยอดขายรวม
+        // 1. คำนวณยอดขายรวม (ดึงมาจาก sub_sales_so ตามคำขอ)
         let totalRevenue = 0;
-        salesSo.forEach(row => {
+        subSalesSo.forEach(row => {
             const total = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
             if (!isNaN(total)) totalRevenue += total;
         });
 
-        // 2. ข้อมูลสำหรับกราฟเส้น (ยอดขายรายเดือน - ย้อนหลัง 6 เดือน)
-        const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-        const monthlySales = Array(12).fill(0);
+        // คำนวณยอดซื้อรวม (ดึงมาจาก sub_precher_po)
+        let totalPurchase = 0;
+        subPrecherPo.forEach(row => {
+            const total = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
+            if (!isNaN(total)) totalPurchase += total;
+        });
+
+        // 2. ข้อมูลสำหรับกราฟเส้น (การขายและการซื้อรายเดือน - ย้อนหลัง 12 เดือนจนถึงเดือนนี้)
+        const monthNamesFull = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        const rollingLabels = [];
+        const rollingSales = Array(13).fill(0);
+        const rollingPurchases = Array(13).fill(0);
         
-        salesSo.forEach(row => {
-            const dateStr = row['วันที่']; // สมมติรูปแบบ "DD/MM/YYYY" หรือใกล้เคียง
-            if (dateStr) {
-                const parts = dateStr.split('/');
-                if (parts.length >= 2) {
-                    const monthIdx = parseInt(parts[1]) - 1;
-                    const total = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
-                    if (!isNaN(total) && monthIdx >= 0 && monthIdx < 12) {
-                        monthlySales[monthIdx] += total;
-                    }
-                }
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        // สร้าง Labels สำหรับ 13 เดือนย้อนหลัง (เช่น พ.ค. 2025 - พ.ค. 2026)
+        for (let i = 12; i >= 0; i--) {
+            let m = currentMonth - i;
+            let y = currentYear;
+            if (m < 0) {
+                m += 12;
+                y -= 1;
+            }
+            rollingLabels.push(`${monthNamesFull[m]} ${y + 543}`); // ใช้ปี พ.ศ.
+        }
+
+        // ฟังก์ชันหา Index ของเดือนในกราฟ
+        const getRollingIndex = (dateStr) => {
+            if (!dateStr) return -1;
+            const parts = dateStr.split('/');
+            if (parts.length < 3) return -1;
+            
+            const d = parseInt(parts[0]);
+            const m = parseInt(parts[1]) - 1;
+            let y = parseInt(parts[2]);
+            if (y > 2500) y -= 543; // แปลง พ.ศ. เป็น ค.ศ. ถ้าจำเป็น
+
+            const date = new Date(y, m, d);
+            const monthsDiff = (currentYear - date.getFullYear()) * 12 + (currentMonth - date.getMonth());
+            
+            if (monthsDiff >= 0 && monthsDiff <= 12) {
+                return 12 - monthsDiff;
+            }
+            return -1;
+        };
+
+        // สร้าง Map ของวันที่
+        const salesDateMap = {};
+        salesSo.forEach(row => { if (row['id'] && row['วันที่']) salesDateMap[row['id']] = row['วันที่']; });
+        const purchaseDateMap = {};
+        precherPo.forEach(row => { if (row['id'] && row['วันที่']) purchaseDateMap[row['id']] = row['วันที่']; });
+
+        // คำนวณยอดขายรายเดือน
+        subSalesSo.forEach(row => {
+            const dateStr = salesDateMap[row['id']];
+            const idx = getRollingIndex(dateStr);
+            if (idx !== -1) {
+                const total = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
+                if (!isNaN(total)) rollingSales[idx] += total;
+            }
+        });
+
+        // คำนวณยอดซื้อรายเดือน
+        subPrecherPo.forEach(row => {
+            const dateStr = purchaseDateMap[row['id']];
+            const idx = getRollingIndex(dateStr);
+            if (idx !== -1) {
+                const total = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
+                if (!isNaN(total)) rollingPurchases[idx] += total;
             }
         });
 
@@ -280,12 +340,14 @@ app.get('/', async (req, res) => {
             stats: {
                 totalRevenue: totalRevenue.toLocaleString(),
                 pendingOrders: pendingOrders,
-                lowStockCount: lowStockItems,
+                totalPurchase: totalPurchase.toLocaleString(),
                 totalProducts: stock.length
             },
             chartData: {
-                labels: monthNames,
-                sales: monthlySales,
+                labels: rollingLabels,
+                sales: rollingSales,
+                purchases: rollingPurchases,
+                comparison: [totalRevenue, totalPurchase], // ส่งข้อมูลเปรียบเทียบยอดขาย vs ยอดซื้อ
                 status: [statusCounts.confirmed, statusCounts.pending]
             },
             recentSales: recentSales
@@ -295,7 +357,7 @@ app.get('/', async (req, res) => {
         res.render('index', {
             title: 'Dashboard',
             stats: { totalRevenue: 0, pendingOrders: 0, lowStockCount: 0, totalProducts: 0 },
-            chartData: { labels: [], sales: [], status: [0, 0] },
+            chartData: { labels: [], sales: [], purchases: [], status: [0, 0] },
             recentSales: []
         });
     }
@@ -1529,7 +1591,13 @@ app.post("/api/delete_order_so", async (req, res) => {
 
 // AI Chat Routes
 app.get('/ai_chat', requireLogin, (req, res) => {
-    res.render('ai_chat');
+    const history = req.session.chatHistory || [];
+    res.render('ai_chat', { history });
+});
+
+app.post('/api/chat/clear', requireLogin, (req, res) => {
+    req.session.chatHistory = [];
+    res.json({ success: true });
 });
 
 app.post('/api/chat', requireLogin, async (req, res) => {
@@ -1537,48 +1605,74 @@ app.post('/api/chat', requireLogin, async (req, res) => {
     if (!userMessage) return res.status(400).json({ error: 'Message is required' });
 
     try {
-        // Fetch data for RAG
-        const stock = await getsheet(null, 'stock');
-        const salesPr = await getsheet(null, 'Sale_pr');
-        const salesSo = await getsheet(null, 'sales_so');
+        // ดึงข้อมูลทุก Table เพื่อให้ AI มีความรู้ครบถ้วน
+        const [stock, product, salesPr, subSalesPr, salesSo, subSalesSo, employees] = await Promise.all([
+            getsheet(null, 'stock'),
+            getsheet(null, 'product'),
+            getsheet(null, 'Sale_pr'),
+            getsheet(null, 'sub_sales_pr'),
+            getsheet(null, 'sales_so'),
+            getsheet(null, 'sub_sales_so'),
+            getsheet(null, 'empolyee')
+        ]);
 
         const contextData = {
-            inventory: stock.map(s => ({ code: s['รหัส'], name: s['ชื่อ'], qty: s['จำนวน'], unit: s['หน่วย'] })),
-            recent_sales_pr: salesPr.slice(-10).map(s => ({ id: s['id'], date: s['วันที่'], customer: s['ลูกค้า-ผู้ขาย'], status: s['สถานะเอกสาร'] })),
-            recent_sales_so: salesSo.slice(-10).map(s => ({ id: s['id'], date: s['วันที่'], customer: s['ลูกค้า-ผู้ขาย'], total: s['จำนวนเงินรวม'] }))
+            inventory_summary: stock.map(s => ({ รหัส: s['รหัส'], ชื่อ: s['ชื่อ'], จำนวน: s['จำนวน'], หน่วย: s['หน่วย'] })),
+            product_catalog: product.map(p => ({ รหัส: p['รหัส'], ชื่อ: p['ชื่อ'], ราคา: p['ราคาขาย'], แบรนด์: p['แบรนด์'] })),
+            sales_proposals: salesPr.map(s => ({ id: s['id'], วันที่: s['วันที่'], ลูกค้า: s['ลูกค้า-ผู้ขาย'], สถานะ: s['สถานะเอกสาร'] })),
+            sales_orders: salesSo.map(s => ({ id: s['id'], วันที่: s['วันที่'], ลูกค้า: s['ลูกค้า-ผู้ขาย'], ยอดรวม: s['จำนวนเงินรวม'] })),
+            proposal_details: subSalesPr.map(d => ({ id: d['id'], สินค้า: d['สินค้า'], จำนวน: d['จำนวน'], รวม: d['จำนวนเงินรวม'] })),
+            order_details: subSalesSo.map(d => ({ id: d['id'], สินค้า: d['สินค้า'], จำนวน: d['จำนวน'], รวม: d['จำนวนเงินรวม'] })),
+            team: employees.map(e => ({ ชื่อ: e['ชื่อpic'], รหัส: e['รหัสpic'], แผนก: e['แผนก'] }))
         };
 
-        const systemPrompt = `คุณคือ "พี่ AI" ผู้ช่วยอัจฉริยะที่ดูแลระบบ ERP ของพรีเมียร์ (Premier) 
-บุคลิกของคุณคือ: เป็นกันเอง, สุภาพ, มีความเป็นมืออาชีพเหมือนพี่ที่คอยช่วยเหลือดูแลน้องๆ ในออฟฟิศ
-
-ข้อมูลในระบบที่พี่หามาให้ (Context):
-${JSON.stringify(contextData)}
-
-แนวทางการตอบของพี่:
-1. ใช้ภาษาไทยที่เป็นธรรมชาติ (เช่น ใช้คำว่า "พี่เช็คให้แล้วครับ/ค่ะ", "มีรายการน่าสนใจคือ...", "ตรงนี้พี่แนะนำว่า...") 
-2. แทนตัวเองว่า "พี่" หรือ "ผม/ดิฉัน" ตามความเหมาะสม (ในที่นี้ให้ใช้ "พี่ AI" เป็นหลัก)
-3. การสรุปข้อมูล: ไม่ตอบเป็นตารางแห้งๆ ให้เล่าเหมือนพี่สรุปให้น้องฟัง เช่น
-   - "ตอนนี้ในคลังมีของที่ต้องรีบเติมอยู่นะครับ มี 3 รายการคือ..."
-   - "ยอดขายเดือนนี้ดูดีเลยครับ โดยเฉพาะลูกค้ากลุ่ม..."
-4. ถ้าไม่เจอข้อมูล: ให้บอกแบบพี่ช่วยหา เช่น "พี่ลองหาดูแล้วยังไม่เจอข้อมูลตรงนี้เลยครับ น้องลองเช็คชื่อสะกดอีกทีไหม?"
-5. ความลับข้อมูล: ยังคงรักษาความลับและไม่แสดง JSON ดิบเด็ดขาด
-6. การคำนวณ: สรุปยอดรวมให้เสร็จสรรพ พร้อมบอกแนวโน้มสั้นๆ ถ้าทำได้`;
+        // อ่าน Prompt จากไฟล์ .txt
+        let systemPrompt = "";
+        try {
+            const promptTemplate = fs.readFileSync(path.join(__dirname, 'ai_prompt.txt'), 'utf8');
+            systemPrompt = promptTemplate.replace('{{contextData}}', JSON.stringify(contextData));
+        } catch (readErr) {
+            console.error("Error reading ai_prompt.txt:", readErr);
+            systemPrompt = `คุณคือ "พี่ AI" ผู้ช่วยระบบ ERP พรีเมียร์\nContext: ${JSON.stringify(contextData)}`;
+        }
 
         const geminiApiKey = process.env.GEMINI_API_KEY;
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiApiKey}`;
+        // ใช้ gemini-flash-latest เป็นมาตรฐาน
+        const modelName = "gemini-flash-latest"; 
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
 
-        console.log(`[AI] Sending request to Google Gemini API (gemini-flash-latest)`);
+        // จัดการประวัติการแชท
+        if (!req.session.chatHistory) req.session.chatHistory = [];
+        
+        // จำกัดประวัติการแชทไว้ที่ 10 ข้อความล่าสุดเพื่อประหยัด Token
+        const history = req.session.chatHistory.slice(-10);
+
+        // สร้าง Contents สำหรับ Gemini (รวม System Prompt และ History)
+        const contents = [
+            {
+                role: 'user',
+                parts: [{ text: `System Instruction: ${systemPrompt}\n\nกรุณารับทราบข้อมูลและทำหน้าที่เป็นพี่ AI ตามที่ระบุ` }]
+            },
+            {
+                role: 'model',
+                parts: [{ text: "รับทราบครับน้อง พี่ AI พร้อมช่วยเหลือและให้ข้อมูลระบบ ERP พรีเมียร์ตามคำสั่งแล้วครับ มีอะไรให้พี่ช่วยเช็ค บอกมาได้เลย!" }]
+            },
+            ...history.map(msg => ({
+                role: msg.role,
+                parts: [{ text: msg.text }]
+            })),
+            {
+                role: 'user',
+                parts: [{ text: userMessage }]
+            }
+        ];
+
+        console.log(`[AI] Sending request to Google Gemini API with history (${history.length} turns)`);
 
         const response = await fetch(geminiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `${systemPrompt}\n\nคำถามจากผู้ใช้: ${userMessage}`
-                    }]
-                }]
-            })
+            body: JSON.stringify({ contents })
         });
 
         if (!response.ok) {
@@ -1589,7 +1683,13 @@ ${JSON.stringify(contextData)}
         const result = await response.json();
         
         if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-            res.json({ response: result.candidates[0].content.parts[0].text });
+            const aiResponse = result.candidates[0].content.parts[0].text;
+            
+            // บันทึกประวัติลง Session
+            req.session.chatHistory.push({ role: 'user', text: userMessage });
+            req.session.chatHistory.push({ role: 'model', text: aiResponse });
+            
+            res.json({ response: aiResponse });
         } else {
             res.status(500).json({ error: 'Invalid response from Gemini API' });
         }

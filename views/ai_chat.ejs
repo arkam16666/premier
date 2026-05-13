@@ -31,7 +31,7 @@
                 <a href="<%= baseUrl %>/sale_so">Sale SO</a>
                 <a href="#">เสนอซื้อ</a>
                 <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
-                <a href="<%= baseUrl %>/ai_chat" class="active"><i class="fas fa-robot"></i> AI Assistant</a>
+                <a href="<%= baseUrl %>/ai_chat" class="active"> AI Assistant</a>
             </nav>
 
             <div style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -47,7 +47,7 @@
 
         <main class="main-content">
             <header class="animate-up">
-                <h1 style="font-size: 2.2rem; color: #fff;"><i class="fas fa-robot"></i> AI Assistant</h1>
+                <h1 style="font-size: 2.2rem; color: #fff;"> AI Assistant</h1>
                 <p style="color: #a0a0b5; margin-top: 5px;">คุยกับ "พี่ AI" เพื่อเช็คข้อมูลในระบบได้เลยครับ</p>
             </header>
 
@@ -57,16 +57,37 @@
                         <div class="status-dot"></div>
                         <span>Pee AI Online | Ready to Help</span>
                     </div>
-                    <div style="font-size: 0.8rem; color: #666;">
-                        Powered by Gemini AI
-                    </div>
+                    <button id="clearChatBtn" class="btn-clear" title="ล้างประวัติการแชท">
+                        <i class="fas fa-trash-alt"></i> ล้างแชท
+                    </button>
                 </div>
 
                 <div class="chat-messages" id="chatMessages">
-                    <div class="message ai">
-                        <div class="message-header"><i class="fas fa-robot"></i> พี่ AI Assistant</div>
-                        สวัสดีครับน้อง! พี่เป็นผู้ช่วยประจำระบบ ERP พรีเมียร์นะครับ อยากให้พี่ช่วยเช็คสต็อกสินค้า สรุปยอดขาย หรือหาข้อมูลตรงไหน บอกพี่ได้เลยนะ พี่สแตนบายรอช่วยอยู่ครับ! 😊
-                    </div>
+                    <% if (history && history.length > 0) { %>
+                        <% history.forEach(msg => { %>
+                            <div class="message <%= msg.role === 'user' ? 'user' : 'ai' %>">
+                                <div class="message-header">
+                                    <i class="fas <%= msg.role === 'user' ? 'fa-user' : '' %>"></i>
+                                    <%= msg.role === 'user' ? 'You' : 'พี่ AI Assistant' %>
+                                </div>
+                                <div class="message-content">
+                                    <% if (msg.role === 'model') { %>
+                                        <%- msg.text %>
+                                    <% } else { %>
+                                        <%= msg.text %>
+                                    <% } %>
+                                </div>
+                                <% if (msg.role === 'model') { %>
+                                    <div class="rag-badge"><i class="fas fa-database"></i> Database Connected</div>
+                                <% } %>
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="message ai">
+                            <div class="message-header"> พี่ AI Assistant</div>
+                            สวัสดีครับน้อง! พี่เป็นผู้ช่วยประจำระบบ ERP พรีเมียร์นะครับ อยากให้พี่ช่วยเช็คสต็อกสินค้า สรุปยอดขาย หรือหาข้อมูลตรงไหน บอกพี่ได้เลยนะ พี่สแตนบายรอช่วยอยู่ครับ! 😊
+                        </div>
+                    <% } %>
                 </div>
 
                 <div class="chat-input-area">
@@ -96,7 +117,7 @@
             
             const header = document.createElement('div');
             header.className = 'message-header';
-            header.innerHTML = isAi ? '<i class="fas fa-robot"></i> พี่ AI Assistant' : '<i class="fas fa-user"></i> You';
+            header.innerHTML = isAi ? ' พี่ AI Assistant' : '<i class="fas fa-user"></i> You';
             
             const content = document.createElement('div');
             content.className = 'message-content';
@@ -125,7 +146,7 @@
             indicator.className = 'message ai typing-indicator-wrapper';
             indicator.id = 'typingIndicator';
             indicator.innerHTML = `
-                <div class="message-header"><i class="fas fa-robot"></i> พี่ AI Assistant</div>
+                <div class="message-header"> พี่ AI Assistant</div>
                 <div class="typing-indicator">
                     <div class="dot"></div>
                     <div class="dot"></div>
@@ -181,6 +202,26 @@
         sendBtn.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
+        });
+
+        // Clear Chat History
+        document.getElementById('clearChatBtn').addEventListener('click', async () => {
+            if (confirm('น้องแน่ใจนะครับว่าต้องการล้างประวัติการแชททั้งหมด?')) {
+                try {
+                    const response = await fetch('/api/chat/clear', { method: 'POST' });
+                    if (response.ok) {
+                        chatMessages.innerHTML = `
+                            <div class="message ai">
+                                <div class="message-header"> พี่ AI Assistant</div>
+                                พี่ล้างประวัติการแชทให้เรียบร้อยแล้วครับ! มีอะไรให้พี่ช่วยใหม่ บอกได้เลยนะ 😊
+                            </div>
+                        `;
+                    }
+                } catch (err) {
+                    console.error('Clear chat error:', err);
+                    alert('เกิดข้อผิดพลาดในการล้างแชทครับ');
+                }
+            }
         });
     </script>
 </body>

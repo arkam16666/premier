@@ -31,6 +31,27 @@
     color: #a0a0b5;
 }
 
+.btn-clear {
+    background: transparent;
+    border: 1px solid #281a3d;
+    color: #a0a0b5;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Kanit', sans-serif;
+}
+
+.btn-clear:hover {
+    background: rgba(255, 45, 136, 0.1);
+    color: #ff7eb3;
+    border-color: #ff7eb3;
+}
+
 .status-dot {
     width: 8px;
     height: 8px;

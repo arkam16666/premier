@@ -31,7 +31,7 @@
                 <a href="<%= baseUrl %>/sale_so">Sale SO</a>
                 <a href="#"><i class="icon-inventory"></i> เสนอซื้อ</a>
                 <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
-                <a href="<%= baseUrl %>/ai_chat"><i class="fas fa-robot"></i> AI Assistant</a>
+                <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
             </nav>
 
             <div
@@ -59,16 +59,16 @@
                     <div class="stat-value">฿<%= stats.totalRevenue %></div>
                 </div>
 
-                <div class="stat-card card-pending animate-up delay-2">
+                <div class="stat-card card-stock animate-up delay-2">
+                    <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+                    <div class="stat-label">ยอดซื้อรวมทั้งหมด (PO)</div>
+                    <div class="stat-value">฿<%= stats.totalPurchase %></div>
+                </div>
+
+                <div class="stat-card card-pending animate-up delay-3">
                     <div class="stat-icon"><i class="fas fa-clock"></i></div>
                     <div class="stat-label">ออเดอร์รอการยืนยัน</div>
                     <div class="stat-value"><%= stats.pendingOrders %> รายการ</div>
-                </div>
-
-                <div class="stat-card card-stock animate-up delay-3">
-                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                    <div class="stat-label">สินค้าสต็อกต่ำ (< 10)</div>
-                    <div class="stat-value"><%= stats.lowStockCount %> รายการ</div>
                 </div>
 
                 <div class="stat-card card-products animate-up delay-4">
@@ -82,7 +82,7 @@
             <div class="dashboard-row animate-up delay-5" style="margin-bottom: 25px; grid-template-columns: 1.5fr 1fr;">
                 <div class="glass-panel">
                     <div class="panel-header">
-                        <h2 class="panel-title"><i class="fas fa-chart-area"></i> แนวโน้มยอดขายรายเดือน</h2>
+                        <h2 class="panel-title"><i class="fas fa-chart-area"></i> แนวโน้มการขายและการซื้อ</h2>
                     </div>
                     <div style="height: 300px; position: relative;">
                         <canvas id="salesChart"></canvas>
@@ -90,7 +90,7 @@
                 </div>
                 <div class="glass-panel">
                     <div class="panel-header">
-                        <h2 class="panel-title"><i class="fas fa-chart-pie"></i> สัดส่วนสถานะเอกสาร</h2>
+                        <h2 class="panel-title"><i class="fas fa-chart-pie"></i> สัดส่วนยอดขายและยอดซื้อ</h2>
                     </div>
                     <div style="height: 300px; position: relative; display: flex; justify-content: center;">
                         <canvas id="statusChart"></canvas>
@@ -98,74 +98,10 @@
                 </div>
             </div>
 
-            <div class="dashboard-row animate-up delay-5">
-                <div class="glass-panel">
-                    <div class="panel-header">
-                        <h2 class="panel-title"><i class="fas fa-history"></i> รายการเสนอขายล่าสุด</h2>
-                        <a href="/sale_pr" style="color: #a786ff; text-decoration: none; font-size: 0.9rem;">ดูทั้งหมด</a>
-                    </div>
-                    <table class="recent-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>วันที่</th>
-                                <th>ลูกค้า</th>
-                                <th>PIC</th>
-                                <th>สถานะ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% if (recentSales && recentSales.length > 0) { %>
-                                <% recentSales.forEach(sale => { 
-                                    const isConfirmed = ['สำเร็จ', 'ยืนยันแล้ว'].includes((sale['สถานะเอกสาร'] || '').trim());
-                                %>
-                                    <tr>
-                                        <td>#<%= sale['id'] %></td>
-                                        <td><%= sale['วันที่'] %></td>
-                                        <td><%= sale['ลูกค้า-ผู้ขาย'] %></td>
-                                        <td><%= sale['PIC'] %></td>
-                                        <td>
-                                            <span class="status-indicator <%= isConfirmed ? 'status-confirmed' : 'status-pending' %>">
-                                                <%= isConfirmed ? 'ยืนยันแล้ว' : 'รอการยืนยัน' %>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <% }) %>
-                            <% } else { %>
-                                <tr>
-                                    <td colspan="5" style="text-align: center; color: #666; padding: 30px;">ไม่มีข้อมูลรายการล่าสุด</td>
-                                </tr>
-                            <% } %>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="glass-panel" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: #150c22; border: 1px solid #281a3d;">
-                    <div style="font-size: 3rem; color: #ff7eb3; margin-bottom: 20px;"><i class="fas fa-plus-circle"></i></div>
-                    <h3 style="margin-bottom: 15px;">เพิ่มรายการใหม่</h3>
-                    <p style="color: #a0a0b5; font-size: 0.9rem; margin-bottom: 25px;">เริ่มการขายใหม่หรือเช็คคลังสินค้าได้ทันทีจากที่นี่</p>
-                    <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
-                        <a href="/add_sale" style="text-decoration: none;">
-                            <div style="background: linear-gradient(135deg, rgba(255, 126, 179, 0.8), rgba(255, 45, 136, 0.8)); padding: 12px; border-radius: 8px; color: white; font-weight: 600; border: 1px solid rgba(255, 126, 179, 0.3);">
-                                <i class="fas fa-plus"></i> ออกใบเสนอขาย
-                            </div>
-                        </a>
-                        <a href="/inventory" style="text-decoration: none;">
-                            <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; color: white; border: 1px solid rgba(255,255,255,0.1);">
-                                <i class="fas fa-boxes"></i> เช็กสต็อกสินค้า
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </div>
         </main>
     </div>
 
-    <!-- Floating AI Button -->
-    <a href="/ai_chat" class="floating-ai-btn animate-up" title="ถาม AI ผู้ช่วย">
-        <i class="fas fa-robot"></i>
-        <span class="pulse"></span>
-    </a>
+
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -183,27 +119,45 @@
             }
         };
 
-        // 1. Sales Trend Chart (Line)
+        // 1. Sales & Purchases Trend Chart (Line)
         const ctxSales = document.getElementById('salesChart').getContext('2d');
+        
         const salesGradient = ctxSales.createLinearGradient(0, 0, 0, 400);
         salesGradient.addColorStop(0, 'rgba(167, 134, 255, 0.25)');
         salesGradient.addColorStop(1, 'rgba(167, 134, 255, 0)');
+
+        const purchaseGradient = ctxSales.createLinearGradient(0, 0, 0, 400);
+        purchaseGradient.addColorStop(0, 'rgba(255, 126, 179, 0.25)');
+        purchaseGradient.addColorStop(1, 'rgba(255, 126, 179, 0)');
 
         new Chart(ctxSales, {
             type: 'line',
             data: {
                 labels: chartData.labels,
-                datasets: [{
-                    label: 'ยอดขาย (บาท)',
-                    data: chartData.sales,
-                    borderColor: '#a786ff',
-                    backgroundColor: salesGradient,
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 2,
-                    pointBackgroundColor: '#fff',
-                    pointRadius: 3
-                }]
+                datasets: [
+                    {
+                        label: 'ยอดขาย (บาท)',
+                        data: chartData.sales,
+                        borderColor: '#a786ff',
+                        backgroundColor: salesGradient,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff',
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'ยอดซื้อ (บาท)',
+                        data: chartData.purchases || [],
+                        borderColor: '#ff7eb3',
+                        backgroundColor: purchaseGradient,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff',
+                        pointRadius: 3
+                    }
+                ]
             },
             options: {
                 ...commonOptions,
@@ -221,17 +175,17 @@
             }
         });
 
-        // 2. Status Distribution Chart (Doughnut)
+        // 2. Sales vs Purchases Comparison Chart (Doughnut)
         const ctxStatus = document.getElementById('statusChart').getContext('2d');
         new Chart(ctxStatus, {
             type: 'doughnut',
             data: {
-                labels: ['ยืนยันแล้ว', 'รอการยืนยัน'],
+                labels: ['ยอดขายรวม (SO)', 'ยอดซื้อรวม (PO)'],
                 datasets: [{
-                    data: chartData.status,
+                    data: chartData.comparison || [0, 0],
                     backgroundColor: [
-                        'rgba(255, 126, 179, 0.8)', // Subdued Pink
-                        'rgba(255, 202, 44, 0.8)'   // Subdued Amber
+                        '#a786ff', // Purple for Sales
+                        '#ff7eb3'  // Pink for Purchases
                     ],
                     borderWidth: 1,
                     borderColor: '#150c22',
@@ -245,6 +199,20 @@
                     legend: {
                         position: 'bottom',
                         labels: { padding: 20, color: '#a0a0b5' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += '฿' + context.parsed.toLocaleString();
+                                }
+                                return label;
+                            }
+                        }
                     }
                 }
             }
