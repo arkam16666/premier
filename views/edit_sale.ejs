@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="edit_sale.css">
     <link rel="stylesheet" href="model.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>แก้ไขออเดอร์</title>
     <style>
         /* Pretty Quantity Input */
@@ -229,25 +230,56 @@
     <%- include('order_modal.ejs') %>
 
     <script>
+        // Configure SweetAlert2 globally
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            background: '#1d112e',
+            color: '#fff'
+        });
+
         // ฟังก์ชันลบแบบเลือก Checkbox
-        function softDelete() {
+        async function softDelete() {
             const checkboxes = document.querySelectorAll('.item-checkbox:checked');
             if (checkboxes.length === 0) {
-                alert('กรุณาเลือกรายการที่ต้องการลบ');
+                Toast.fire({
+                    icon: 'warning',
+                    title: 'กรุณาเลือกรายการที่ต้องการลบ'
+                });
                 return;
             }
 
-            if (confirm(`ยืนยันการลบ ${checkboxes.length} รายการที่เลือก?`)) {
+            const result = await Swal.fire({
+                title: 'ยืนยันการลบ?',
+                text: `ยืนยันการลบ ${checkboxes.length} รายการที่เลือก?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#281a3d',
+                confirmButtonText: 'ลบรายการ',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1d112e',
+                color: '#fff'
+            });
+
+            if (result.isConfirmed) {
                 checkboxes.forEach(cb => {
                     const row = cb.closest('tr');
                     row.style.display = 'none';
                     row.querySelector('.item-qty').value = 0;
                     cb.checked = false;
                 });
+                Toast.fire({
+                    icon: 'success',
+                    title: 'ลบรายการชั่วคราวแล้ว'
+                });
             }
         }
 
-        function saveChanges() {
+        async function saveChanges() {
             const rows = document.querySelectorAll('#salePrBody .item-row');
             const finalItems = [];
 
@@ -255,7 +287,6 @@
                 const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
                 const productCode = row.getAttribute('data-product');
                 
-                // เก็บเฉพาะแถวที่ไม่ได้ถูกซ่อน (display !== 'none') และมีจำนวนมากกว่า 0
                 if (row.style.display !== 'none' && qty > 0) {
                     const productInfo = allProducts.find(p => p['รหัส'] === productCode);
                     if (productInfo) {
@@ -268,36 +299,79 @@
             });
 
             if (finalItems.length === 0 && !pendingOrderChanges) {
-                alert('ไม่มีรายการที่เปลี่ยนแปลง หรือไม่มีสินค้าเหลือในรายการ');
+                Swal.fire({
+                    icon: 'info',
+                    title: 'ไม่มีการเปลี่ยนแปลง',
+                    text: 'ไม่มีรายการที่เปลี่ยนแปลง หรือไม่มีสินค้าเหลือในรายการ',
+                    background: '#1d112e',
+                    color: '#fff'
+                });
                 return;
             }
 
-            if (!confirm('ยืนยันการบันทึกการเปลี่ยนแปลงทั้งหมด?')) {
-                return;
-            }
-
-            fetch('/api/save_changes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: currentEditId,
-                    finalItems: finalItems,
-                    orderChanges: pendingOrderChanges
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) {
-                    alert('เกิดข้อผิดพลาด: ' + data.error);
-                    return;
-                }
-                alert('บันทึกสำเร็จ!');
-                setTimeout(() => { window.location.reload(); }, 1000);
-            })
-            .catch(err => {
-                console.error('Save error:', err);
-                alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+            const result = await Swal.fire({
+                title: 'ยืนยันการบันทึก?',
+                text: 'ยืนยันการบันทึกการเปลี่ยนแปลงทั้งหมด?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#ff7eb3',
+                cancelButtonColor: '#281a3d',
+                confirmButtonText: 'บันทึกข้อมูล',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1d112e',
+                color: '#fff'
             });
+
+            if (!result.isConfirmed) return;
+
+            // Show loading
+            Swal.fire({
+                title: 'กำลังบันทึกข้อมูล...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                background: '#1d112e',
+                color: '#fff'
+            });
+
+            try {
+                const response = await fetch('/api/save_changes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: currentEditId,
+                        finalItems: finalItems,
+                        orderChanges: pendingOrderChanges
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกสำเร็จ!',
+                    text: 'ข้อมูลถูกอัปเดตเรียบร้อยแล้ว',
+                    background: '#1d112e',
+                    color: '#fff',
+                    confirmButtonColor: '#ff7eb3'
+                }).then(() => {
+                    window.location.reload();
+                });
+            } catch (err) {
+                console.error('Save error:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: err.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+                    background: '#1d112e',
+                    color: '#fff'
+                });
+            }
         }
 
         async function printPDF() {
@@ -311,7 +385,7 @@
                         itemsList.push({
                             'sku': row.cells[1].innerText,
                             'productName': row.cells[2].innerText,
-                            'info': row.cells[3].innerText, // ข้อมูลจำเพราะ
+                            'info': row.cells[3].innerText,
                             'qty': qty,
                             'unit': row.cells[5].innerText,
                             'unitPrice': parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0,
@@ -324,7 +398,13 @@
             });
 
             if (itemsList.length === 0) {
-                alert('ไม่มีรายการสินค้าสำหรับสั่งพิมพ์');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ไม่มีรายการสินค้า',
+                    text: 'ไม่มีรายการสินค้าสำหรับสั่งพิมพ์',
+                    background: '#1d112e',
+                    color: '#fff'
+                });
                 return;
             }
 
@@ -332,9 +412,6 @@
             const totalVat = itemsList.reduce((sum, item) => sum + (item.vat || 0), 0);
             const grandTotal = itemsList.reduce((sum, item) => sum + (item.total || 0), 0);
             
-            // เตรียม Payload ให้ตรงกับโครงสร้างที่ Python (main.py) คาดหวังแบบเป๊ะๆ
-            // 1. Python จะเช็ค json_data["items"][0] มาเป็นข้อมูลหลัก (inner)
-            // 2. ข้อมูลตารางสินค้าต้องอยู่ใน inner["items"]
             const payload = {
                 items: [{
                     id: currentEditId,
@@ -342,18 +419,25 @@
                     picName: headerData['PIC'] || '',
                     sellerName: headerData['ลูกค้า-ผู้ขาย'] || '',
                     note: headerData['โทรศัพท์'] || '',
-                    picDepartment: '', // Placeholder
+                    picDepartment: '',
                     title: 'ใบเสนอราคา / Sale Quotation',
                     vat: Number(totalVat.toFixed(2)),
                     grandTotal: Number(grandTotal.toFixed(2)),
-                    items: itemsList // รายการสินค้า sku, productName, qty, unitPrice, total
+                    items: itemsList
                 }]
             };
 
-            const btn = document.getElementById('btnprint');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังเตรียมไฟล์...';
-            btn.disabled = true;
+            // Show loading
+            Swal.fire({
+                title: 'กำลังเตรียมไฟล์ PDF...',
+                text: 'กรุณารอสักครู่',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                background: '#1d112e',
+                color: '#fff'
+            });
 
             try {
                 const response = await fetch('/api/generate-pdf', {
@@ -376,12 +460,20 @@
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
+                Swal.close();
+                Toast.fire({
+                    icon: 'success',
+                    title: 'ดาวน์โหลด PDF สำเร็จ'
+                });
             } catch (err) {
                 console.error('Print error:', err);
-                alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + err.message);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถสร้าง PDF ได้: ' + err.message,
+                    background: '#1d112e',
+                    color: '#fff'
+                });
             }
         }
 
@@ -457,7 +549,14 @@
             }
 
             closeOrderModal();
-            alert('บันทึกการแก้ไขหัวเอกสารแล้ว (กรุณากด "ยืนยัน" อีกครั้งเพื่อบันทึกลงฐานข้อมูล)');
+            Swal.fire({
+                icon: 'success',
+                title: 'บันทึกการแก้ไขหัวเอกสารแล้ว',
+                text: 'กรุณากด "ยืนยัน" อีกครั้งเพื่อบันทึกลงฐานข้อมูล',
+                background: '#1d112e',
+                color: '#fff',
+                confirmButtonColor: '#ff7eb3'
+            });
         }
     </script>
 </body>

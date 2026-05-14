@@ -12,7 +12,10 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="ai_chat.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>AI Assistant - ERP System</title>
 </head>
 
@@ -70,7 +73,7 @@
                                     <i class="fas <%= msg.role === 'user' ? 'fa-user' : '' %>"></i>
                                     <%= msg.role === 'user' ? 'You' : 'พี่ AI Assistant' %>
                                 </div>
-                                <div class="message-content">
+                                <div class="message-content" data-raw="<%= msg.text %>">
                                     <% if (msg.role === 'model') { %>
                                         <%- msg.text %>
                                     <% } else { %>
@@ -85,7 +88,9 @@
                     <% } else { %>
                         <div class="message ai">
                             <div class="message-header"> พี่ AI Assistant</div>
-                            สวัสดีครับน้อง! พี่เป็นผู้ช่วยประจำระบบ ERP พรีเมียร์นะครับ อยากให้พี่ช่วยเช็คสต็อกสินค้า สรุปยอดขาย หรือหาข้อมูลตรงไหน บอกพี่ได้เลยนะ พี่สแตนบายรอช่วยอยู่ครับ! 😊
+                            <div class="message-content">
+                                สวัสดีครับน้อง! พี่เป็นผู้ช่วยประจำระบบ ERP พรีเมียร์นะครับ อยากให้พี่ช่วยเช็คสต็อกสินค้า สรุปยอดขาย หรือหาข้อมูลตรงไหน บอกพี่ได้เลยนะ พี่สแตนบายรอช่วยอยู่ครับ! 😊
+                            </div>
                         </div>
                     <% } %>
                 </div>
@@ -105,11 +110,67 @@
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
 
-        // Configure marked to handle breaks as newlines
+        // Configure SweetAlert2 globally
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            background: '#1d112e',
+            color: '#e0e0e0',
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // Configure marked with highlight.js
+        const renderer = new marked.Renderer();
+        
+        // Custom link renderer to open in new tab
+        renderer.link = (href, title, text) => {
+            return `<a href="${href}" title="${title || ''}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+        };
+
         marked.setOptions({
+            renderer: renderer,
+            highlight: function(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            },
+            langPrefix: 'hljs language-',
             breaks: true,
             gfm: true
         });
+
+        function copyCode(btn, code) {
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = 'คัดลอกแล้ว!';
+                btn.style.background = '#28a745';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = '';
+                }, 2000);
+                Toast.fire({
+                    icon: 'success',
+                    title: 'คัดลอกรหัสเรียบร้อย!'
+                });
+            });
+        }
+
+        function enrichAIContent(container) {
+            // Add copy buttons to pre tags
+            container.querySelectorAll('pre').forEach(pre => {
+                const code = pre.querySelector('code').innerText;
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-code-btn';
+                copyBtn.innerHTML = '<i class="far fa-copy"></i> Copy';
+                copyBtn.onclick = () => copyCode(copyBtn, code);
+                pre.appendChild(copyBtn);
+            });
+        }
 
         function addMessage(text, isAi = false) {
             const msgDiv = document.createElement('div');
@@ -129,17 +190,33 @@
                 const ragBadge = document.createElement('div');
                 ragBadge.className = 'rag-badge';
                 ragBadge.innerHTML = '<i class="fas fa-database"></i> Database Connected';
+                
                 msgDiv.appendChild(header);
                 msgDiv.appendChild(ragBadge);
+                msgDiv.appendChild(content);
+                
+                enrichAIContent(content);
             } else {
                 content.innerText = text;
                 msgDiv.appendChild(header);
+                msgDiv.appendChild(content);
             }
             
-            msgDiv.appendChild(content);
             chatMessages.appendChild(msgDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
+
+        // Initialize history messages
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.message.ai .message-content').forEach(content => {
+                const rawText = content.getAttribute('data-raw');
+                if (rawText) {
+                    content.innerHTML = marked.parse(rawText);
+                    enrichAIContent(content);
+                }
+            });
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
 
         function showTypingIndicator() {
             const indicator = document.createElement('div');
@@ -187,11 +264,23 @@
                     addMessage(result.response, true);
                 } else {
                     addMessage('ขออภัยครับ เกิดข้อผิดพลาดในการประมวลผล: ' + (result.error || 'Unknown error'), true);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: result.error || 'Unknown error',
+                        background: '#1d112e',
+                        color: '#e0e0e0',
+                        confirmButtonColor: '#ff7eb3'
+                    });
                 }
             } catch (err) {
                 console.error('Chat error:', err);
                 removeTypingIndicator();
                 addMessage('ขออภัยครับ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', true);
+                Toast.fire({
+                    icon: 'error',
+                    title: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'
+                });
             } finally {
                 chatInput.disabled = false;
                 sendBtn.disabled = false;
@@ -206,24 +295,50 @@
 
         // Clear Chat History
         document.getElementById('clearChatBtn').addEventListener('click', async () => {
-            if (confirm('น้องแน่ใจนะครับว่าต้องการล้างประวัติการแชททั้งหมด?')) {
+            const result = await Swal.fire({
+                title: 'ยืนยันการล้างแชท?',
+                text: "น้องแน่ใจนะครับว่าต้องการล้างประวัติการแชททั้งหมด?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff2d88',
+                cancelButtonColor: '#281a3d',
+                confirmButtonText: 'ล้างเลย!',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1d112e',
+                color: '#e0e0e0'
+            });
+
+            if (result.isConfirmed) {
                 try {
                     const response = await fetch('/api/chat/clear', { method: 'POST' });
                     if (response.ok) {
                         chatMessages.innerHTML = `
                             <div class="message ai">
                                 <div class="message-header"> พี่ AI Assistant</div>
-                                พี่ล้างประวัติการแชทให้เรียบร้อยแล้วครับ! มีอะไรให้พี่ช่วยใหม่ บอกได้เลยนะ 😊
+                                <div class="message-content">
+                                    พี่ล้างประวัติการแชทให้เรียบร้อยแล้วครับ! มีอะไรให้พี่ช่วยใหม่ บอกได้เลยนะ 😊
+                                </div>
                             </div>
                         `;
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'ล้างแชทสำเร็จ'
+                        });
                     }
                 } catch (err) {
                     console.error('Clear chat error:', err);
-                    alert('เกิดข้อผิดพลาดในการล้างแชทครับ');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ผิดพลาด',
+                        text: 'เกิดข้อผิดพลาดในการล้างแชทครับ',
+                        background: '#1d112e',
+                        color: '#e0e0e0'
+                    });
                 }
             }
         });
     </script>
 </body>
+
 
 </html>

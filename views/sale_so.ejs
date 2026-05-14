@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="menubar.css">
   <link rel="stylesheet" href="sale_so.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <title>Sale SO - ERP System</title>
 </head>
@@ -45,24 +46,6 @@
   </aside>
 
   <main style="padding: 20px;">
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" style="visibility: hidden; opacity: 0; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: all 0.3s ease;">
-      <div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #ff7eb3; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-      <p style="color: white; margin-top: 15px; font-family: 'Kanit', sans-serif;">กำลังประมวลผล...</p>
-    </div>
-
-    <style>
-      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-      .success-toast {
-        position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; display: none; animation: slideIn 0.3s ease forwards;
-      }
-      @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-    </style>
-
-    <div id="success-toast" class="success-toast">
-      <i class="fas fa-check-circle"></i> ลบข้อมูลเรียบร้อยแล้ว (OK)
-    </div>
-
     <h1 style="color: #ff7eb3; margin-bottom: 25px;">
         <i class="fas fa-file-contract"></i> รายการสั่งขาย (Sale SO)
     </h1>
@@ -136,38 +119,66 @@
 
   <script>
     async function deleteItem(element, id) {
-      if (!confirm(`ยืนยันการลบรายการ ID: ${id} ใช่หรือไม่?`)) return;
+      const result = await Swal.fire({
+        title: 'ยืนยันการลบ?',
+        text: `ยืนยันการลบรายการ ID: ${id} ใช่หรือไม่?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#281a3d',
+        confirmButtonText: 'ใช่, ลบเลย!',
+        cancelButtonText: 'ยกเลิก',
+        background: '#1d112e',
+        color: '#fff'
+      });
 
-      const overlay = document.getElementById('loading-overlay');
-      const toast = document.getElementById('success-toast');
+      if (!result.isConfirmed) return;
 
-      // 1. Show Loading
-      overlay.style.visibility = 'visible';
-      overlay.style.opacity = '1';
+      // Show loading
+      Swal.fire({
+        title: 'กำลังประมวลผล...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+        background: '#1d112e',
+        color: '#fff'
+      });
 
       try {
         const response = await fetch(`/api/delete_order_so?id=${id}`, { method: 'POST' });
         const result = await response.json();
 
         if (response.ok && result.success) {
-          // 2. Hide Loading & Show OK
-          overlay.style.opacity = '0';
-          setTimeout(() => { overlay.style.visibility = 'hidden'; }, 300);
-          
-          toast.style.display = 'block';
-          
-          // 3. Refresh Page after 1.5s
-          setTimeout(() => { window.location.reload(); }, 1500);
+          Swal.fire({
+            icon: 'success',
+            title: 'ลบข้อมูลเรียบร้อยแล้ว',
+            background: '#1d112e',
+            color: '#fff',
+            confirmButtonColor: '#ff7eb3',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.reload();
+          });
         } else {
-          alert('เกิดข้อผิดพลาด: ' + (result.error || 'ไม่สามารถลบข้อมูลได้'));
-          overlay.style.visibility = 'hidden';
-          overlay.style.opacity = '0';
+          Swal.fire({
+            icon: 'error',
+            title: 'เกิดข้อผิดพลาด',
+            text: result.error || 'ไม่สามารถลบข้อมูลได้',
+            background: '#1d112e',
+            color: '#fff'
+          });
         }
       } catch (err) {
         console.error('Delete error:', err);
-        alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
-        overlay.style.visibility = 'hidden';
-        overlay.style.opacity = '0';
+        Swal.fire({
+          icon: 'error',
+          title: 'ผิดพลาด',
+          text: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์',
+          background: '#1d112e',
+          color: '#fff'
+        });
       }
     }
 
@@ -177,6 +188,7 @@
       btn.disabled = true;
     });
   </script>
+
 
 </body>
 

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="menubar.css">
   <link rel="stylesheet" href="sale_pr.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <title>รายการเสนอขาย (PR) - ERP System</title>
 </head>
@@ -125,8 +126,7 @@
                       <% } %>
                     </td>
                     <td style="text-align: center;">
-                      <a href="/delsale?id=<%= row['id'] %>" class="action-btn delete-btn"
-                        onclick="return confirm('ยืนยันการลบรายการ ID: <%= row['id'] %> ใช่หรือไม่?')">
+                      <a href="javascript:void(0);" onclick="deleteSale('<%= row['id'] %>')" class="action-btn delete-btn">
                         <i class="fa-solid fa-trash"></i>
                       </a>
                     </td>
@@ -145,9 +145,30 @@
 
   <script>
     async function confirmSendWebhook(element, id) {
-      if (!confirm('ยืนยันที่จะส่งข้อมูล ID: ' + id + ' ไปยัง Webhook ใช่หรือไม่?')) {
-        return;
-      }
+      const result = await Swal.fire({
+        title: 'ยืนยันการส่งข้อมูล?',
+        text: `ยืนยันที่จะส่งข้อมูล ID: ${id} ไปยัง Webhook ใช่หรือไม่?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#ff7eb3',
+        cancelButtonColor: '#281a3d',
+        confirmButtonText: 'ยืนยันส่งข้อมูล',
+        cancelButtonText: 'ยกเลิก',
+        background: '#1d112e',
+        color: '#fff'
+      });
+
+      if (!result.isConfirmed) return;
+
+      Swal.fire({
+        title: 'กำลังส่งข้อมูล...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+        background: '#1d112e',
+        color: '#fff'
+      });
 
       try {
         const response = await fetch('/api/confirm-webhook', {
@@ -159,14 +180,54 @@
         const result = await response.json();
 
         if (response.ok && result.success) {
-          alert('ส่งแล้ว');
+          Swal.fire({
+            icon: 'success',
+            title: 'ส่งข้อมูลสำเร็จ',
+            text: 'ระบบได้ทำการส่งข้อมูลและปรับปรุงสถานะเรียบร้อยแล้ว',
+            background: '#1d112e',
+            color: '#fff',
+            confirmButtonColor: '#ff7eb3'
+          }).then(() => {
+            window.location.reload();
+          });
         } else {
-          alert('เกิดข้อผิดพลาด: ' + (result.error || 'ไม่สามารถส่งข้อมูลได้'));
+          Swal.fire({
+            icon: 'error',
+            title: 'เกิดข้อผิดพลาด',
+            text: result.error || 'ไม่สามารถส่งข้อมูลได้',
+            background: '#1d112e',
+            color: '#fff'
+          });
         }
       } catch (err) {
         console.error('Error:', err);
-        alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+        Swal.fire({
+          icon: 'error',
+          title: 'ผิดพลาด',
+          text: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์',
+          background: '#1d112e',
+          color: '#fff'
+        });
       }
+    }
+
+    function deleteSale(id) {
+        Swal.fire({
+            title: 'ยืนยันการลบ?',
+            text: `คุณแน่ใจนะว่าต้องการลบรายการ ID: ${id}?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#281a3d',
+            confirmButtonText: 'ใช่, ลบเลย!',
+            cancelButtonText: 'ยกเลิก',
+            background: '#1d112e',
+            color: '#fff'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = `/delsale?id=${id}`;
+            }
+        });
     }
 
     document.querySelector('.search-container').addEventListener('submit', function (e) {

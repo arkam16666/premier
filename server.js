@@ -1638,7 +1638,7 @@ app.post('/api/chat', requireLogin, async (req, res) => {
 
         const geminiApiKey = process.env.GEMINI_API_KEY;
         // ใช้ gemini-flash-latest เป็นมาตรฐาน
-        const modelName = "gemini-flash-latest"; 
+        const modelName = "gemini-3.1-flash-lite"; 
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
 
         // จัดการประวัติการแชท

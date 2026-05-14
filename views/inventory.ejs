@@ -13,19 +13,11 @@
     <link rel="stylesheet" href="inventory.css">
     <link rel="stylesheet" href="ai_widget.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>คลังสินค้า - ERP System</title>
 </head>
 
 <body>
-    <!-- Glassmorphism Loading Overlay -->
-    <div id="loading-overlay">
-        <div class="loader-container">
-            <div class="loader-circle"></div>
-            <div class="loader-circle-inner"></div>
-        </div>
-        <div class="loading-text">System Processing...</div>
-    </div>
-
     <aside class="sidebar">
         <div class="logo">
             <h2>ระบบ ERP</h2>
@@ -115,19 +107,34 @@
 
 
     <script>
-        // Hide loading overlay when page is fully loaded
+        // Show loading immediately on start
+        Swal.fire({
+            title: 'กำลังโหลดข้อมูล...',
+            text: 'กรุณารอสักครู่ขณะระบบดึงข้อมูลคลังสินค้า',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            background: '#1d112e',
+            color: '#fff'
+        });
+
+        // Hide loading when page is fully loaded
         window.addEventListener('load', function() {
-            const overlay = document.getElementById('loading-overlay');
-            overlay.style.opacity = '0';
-            setTimeout(() => {
-                overlay.style.visibility = 'hidden';
-            }, 600); // Sync with CSS transition duration (0.6s)
+            Swal.close();
         });
 
         // Show loading when form is submitted
         document.querySelector('.search-container').addEventListener('submit', function() {
-            document.getElementById('loading-overlay').style.visibility = 'visible';
-            document.getElementById('loading-overlay').style.opacity = '1';
+            Swal.fire({
+                title: 'กำลังค้นหา...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                background: '#1d112e',
+                color: '#fff'
+            });
         });
     </script>
 </body>

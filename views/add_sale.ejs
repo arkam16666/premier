@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="edit_sale.css">
     <link rel="stylesheet" href="add_order.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>เพิ่มออเดอร์ใหม่</title>
 </head>
 
@@ -122,6 +123,17 @@
         const formData = new FormData(this);
         const data = Object.fromEntries(formData.entries());
 
+        // Show loading
+        Swal.fire({
+            title: 'กำลังสร้างรายการ...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            background: '#1d112e',
+            color: '#fff'
+        });
+
         try {
             const response = await fetch('/add_sale', {
                 method: 'POST',
@@ -132,15 +144,33 @@
             const result = await response.json();
 
             if (response.ok && result.success) {
-                alert('สร้างรายการสำเร็จ');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'สร้างรายการสำเร็จ',
+                    background: '#1d112e',
+                    color: '#fff',
+                    confirmButtonColor: '#ff7eb3'
+                });
                 this.reset();
                 this.querySelector('textarea').focus();
             } else {
-                alert('เกิดข้อผิดพลาด: ' + (result.error || 'ไม่สามารถสร้างรายการได้'));
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: result.error || 'ไม่สามารถสร้างรายการได้',
+                    background: '#1d112e',
+                    color: '#fff'
+                });
             }
         } catch (err) {
             console.error('Error:', err);
-            alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+            Swal.fire({
+                icon: 'error',
+                title: 'ผิดพลาด',
+                text: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์',
+                background: '#1d112e',
+                color: '#fff'
+            });
         }
     });
 </script>
