@@ -13,6 +13,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// --- Simple DoS Detection Middleware ---
+const requestCounts = new Map();
+const DOS_THRESHOLD = 50; // จำนวน request สูงสุดต่อ 10 วินาที
+const RESET_INTERVAL = 10000; // 10 วินาที
+
+setInterval(() => requestCounts.clear(), RESET_INTERVAL);
+
+app.use((req, res, next) => {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const currentCount = (requestCounts.get(ip) || 0) + 1;
+    requestCounts.set(ip, currentCount);
+
+    if (currentCount === DOS_THRESHOLD) {
+        console.error(`[!!! DOS WARNING !!!] IP: ${ip} is making too many requests! (${currentCount} reqs in 10s)`);
+    } else if (currentCount > DOS_THRESHOLD && currentCount % 50 === 0) {
+        console.error(`[!!! DOS CONTINUING !!!] IP: ${ip} | Total: ${currentCount} reqs`);
+    }
+    next();
+});
+
 const session = require("express-session");
 const FileStore = require('session-file-store')(session);
 
@@ -175,18 +196,21 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     try {
         const employees = await getsheet(null, 'empolyee');
         const user = employees.find(e => e['ชื่อภาษาอังกฤษpic'] === username && e['password'] === password);
         
         if (user) {
             req.session.user = user;
+            console.log(`[LOGIN SUCCESS] User: ${user['ชื่อภาษาอังกฤษpic']} (${user['ชื่อpic']}) | IP: ${ip} | Time: ${new Date().toLocaleString('th-TH')}`);
             return res.redirect('/');
         } else {
+            console.warn(`[LOGIN FAILED] Attempted Username: ${username} | IP: ${ip} | Time: ${new Date().toLocaleString('th-TH')}`);
             return res.render('login', { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
         }
     } catch (err) {
-        console.error("Login error:", err);
+        console.error(`[LOGIN ERROR] IP: ${ip} | Error: ${err.message}`);
         return res.render('login', { error: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล' });
     }
 });
