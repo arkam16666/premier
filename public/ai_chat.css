@@ -52,6 +52,43 @@
     border-color: #ff7eb3;
 }
 
+.model-selector-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #281a3d;
+    padding: 5px 12px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.model-selector-wrapper:hover {
+    border-color: #a786ff;
+    background: rgba(167, 134, 255, 0.1);
+}
+
+.model-select {
+    background: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-family: 'Kanit', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    padding: 2px 5px;
+}
+
+.model-select optgroup {
+    background: #1d112e;
+    color: #a786ff;
+    font-weight: 600;
+}
+
+.model-select option {
+    background: #1d112e;
+    color: #e0e0e0;
+}
+
 .status-dot {
     width: 8px;
     height: 8px;

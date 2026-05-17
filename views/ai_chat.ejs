@@ -60,6 +60,12 @@
                         <div class="status-dot"></div>
                         <span>Pee AI Online | Ready to Help</span>
                     </div>
+                    <div class="model-selector-wrapper">
+                        <i class="fas fa-microchip" style="color: #a786ff; margin-right: 5px;"></i>
+                        <select id="modelSelector" class="model-select">
+                            <option value="gemini-3.1-flash-lite">Gemini 1.5 Flash (Default)</option>
+                        </select>
+                    </div>
                     <button id="clearChatBtn" class="btn-clear" title="ล้างประวัติการแชท">
                         <i class="fas fa-trash-alt"></i> ล้างแชท
                     </button>
@@ -109,6 +115,48 @@
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
+        const modelSelector = document.getElementById('modelSelector');
+
+        // Fetch available models
+        async function fetchModels() {
+            try {
+                const response = await fetch('/api/models');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Clear existing options (except the first one if we want to keep it as default)
+                    modelSelector.innerHTML = '';
+                    
+                    // Add Gemini models
+                    if (data.gemini && data.gemini.length > 0) {
+                        const geminiGroup = document.createElement('optgroup');
+                        geminiGroup.label = 'Google Gemini';
+                        data.gemini.forEach(m => {
+                            const option = document.createElement('option');
+                            option.value = m.id;
+                            option.textContent = m.name;
+                            geminiGroup.appendChild(option);
+                        });
+                        modelSelector.appendChild(geminiGroup);
+                    }
+                    
+                    // Add Ollama models
+                    if (data.ollama && data.ollama.length > 0) {
+                        const ollamaGroup = document.createElement('optgroup');
+                        ollamaGroup.label = 'Ollama (Local)';
+                        data.ollama.forEach(m => {
+                            const option = document.createElement('option');
+                            option.value = m.id;
+                            option.textContent = m.name;
+                            ollamaGroup.appendChild(option);
+                        });
+                        modelSelector.appendChild(ollamaGroup);
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching models:', err);
+            }
+        }
 
         // Configure SweetAlert2 globally
         const Toast = Swal.mixin({
@@ -208,6 +256,7 @@
 
         // Initialize history messages
         window.addEventListener('DOMContentLoaded', () => {
+            fetchModels();
             document.querySelectorAll('.message.ai .message-content').forEach(content => {
                 const rawText = content.getAttribute('data-raw');
                 if (rawText) {
@@ -241,6 +290,7 @@
 
         async function sendMessage() {
             const text = chatInput.value.trim();
+            const selectedModel = modelSelector.value;
             if (!text) return;
 
             addMessage(text, false);
@@ -254,7 +304,10 @@
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
+                    body: JSON.stringify({ 
+                        message: text,
+                        model: selectedModel
+                    })
                 });
 
                 const result = await response.json();

@@ -1624,6 +1624,36 @@ app.post('/api/chat/clear', requireLogin, (req, res) => {
     res.json({ success: true });
 });
 
+app.get('/api/models', requireLogin, async (req, res) => {
+    try {
+        const geminiModels = [
+            { id: 'gemini-3.1-flash-lite', name: 'Gemini 1.5 Flash (Default)' },
+            { id: 'gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro' }
+        ];
+
+        let ollamaModels = [];
+        try {
+            const ollamaRes = await fetch('http://127.0.0.1:11434/api/tags');
+            if (ollamaRes.ok) {
+                const data = await ollamaRes.json();
+                ollamaModels = data.models.map(m => ({
+                    id: `ollama:${m.name}`,
+                    name: `Ollama: ${m.name}`
+                }));
+            }
+        } catch (err) {
+            console.warn("[AI] Ollama not available or failed to fetch models:", err.message);
+        }
+
+        res.json({
+            gemini: geminiModels,
+            ollama: ollamaModels
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/chat', requireLogin, async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage) return res.status(400).json({ error: 'Message is required' });
@@ -1661,62 +1691,100 @@ app.post('/api/chat', requireLogin, async (req, res) => {
         }
 
         const geminiApiKey = process.env.GEMINI_API_KEY;
-        // ใช้ gemini-flash-latest เป็นมาตรฐาน
-        const modelName = "gemini-3.1-flash-lite"; 
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
-
+        const requestedModel = req.body.model || "gemini-3.1-flash-lite";
+        
         // จัดการประวัติการแชท
         if (!req.session.chatHistory) req.session.chatHistory = [];
         
         // จำกัดประวัติการแชทไว้ที่ 10 ข้อความล่าสุดเพื่อประหยัด Token
         const history = req.session.chatHistory.slice(-10);
 
-        // สร้าง Contents สำหรับ Gemini (รวม System Prompt และ History)
-        const contents = [
-            {
-                role: 'user',
-                parts: [{ text: `System Instruction: ${systemPrompt}\n\nกรุณารับทราบข้อมูลและทำหน้าที่เป็นพี่ AI ตามที่ระบุ` }]
-            },
-            {
-                role: 'model',
-                parts: [{ text: "รับทราบครับน้อง พี่ AI พร้อมช่วยเหลือและให้ข้อมูลระบบ ERP พรีเมียร์ตามคำสั่งแล้วครับ มีอะไรให้พี่ช่วยเช็ค บอกมาได้เลย!" }]
-            },
-            ...history.map(msg => ({
-                role: msg.role,
-                parts: [{ text: msg.text }]
-            })),
-            {
-                role: 'user',
-                parts: [{ text: userMessage }]
+        let aiResponse = "";
+
+        if (requestedModel.startsWith('ollama:')) {
+            const ollamaModel = requestedModel.replace('ollama:', '');
+            console.log(`[AI] Sending request to Ollama (${ollamaModel}) with history (${history.length} turns)`);
+            
+            const ollamaUrl = "http://127.0.0.1:11434/api/chat";
+            const ollamaMessages = [
+                { role: 'system', content: systemPrompt },
+                ...history.map(msg => ({
+                    role: msg.role === 'model' ? 'assistant' : 'user',
+                    content: msg.text
+                })),
+                { role: 'user', content: userMessage }
+            ];
+
+            const response = await fetch(ollamaUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: ollamaModel,
+                    messages: ollamaMessages,
+                    stream: false
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Ollama API returned ${response.status}: ${errorText}`);
             }
-        ];
 
-        console.log(`[AI] Sending request to Google Gemini API with history (${history.length} turns)`);
+            const result = await response.json();
+            aiResponse = result.message.content;
 
-        const response = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Gemini API returned ${response.status}: ${errorText}`);
-        }
-
-        const result = await response.json();
-        
-        if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-            const aiResponse = result.candidates[0].content.parts[0].text;
-            
-            // บันทึกประวัติลง Session
-            req.session.chatHistory.push({ role: 'user', text: userMessage });
-            req.session.chatHistory.push({ role: 'model', text: aiResponse });
-            
-            res.json({ response: aiResponse });
         } else {
-            res.status(500).json({ error: 'Invalid response from Gemini API' });
+            // Gemini API logic
+            const modelName = requestedModel; 
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
+
+            // สร้าง Contents สำหรับ Gemini (รวม System Prompt และ History)
+            const contents = [
+                {
+                    role: 'user',
+                    parts: [{ text: `System Instruction: ${systemPrompt}\n\nกรุณารับทราบข้อมูลและทำหน้าที่เป็นพี่ AI ตามที่ระบุ` }]
+                },
+                {
+                    role: 'model',
+                    parts: [{ text: "รับทราบครับน้อง พี่ AI พร้อมช่วยเหลือและให้ข้อมูลระบบ ERP พรีเมียร์ตามคำสั่งแล้วครับ มีอะไรให้พี่ช่วยเช็ค บอกมาได้เลย!" }]
+                },
+                ...history.map(msg => ({
+                    role: msg.role,
+                    parts: [{ text: msg.text }]
+                })),
+                {
+                    role: 'user',
+                    parts: [{ text: userMessage }]
+                }
+            ];
+
+            console.log(`[AI] Sending request to Google Gemini API (${modelName}) with history (${history.length} turns)`);
+
+            const response = await fetch(geminiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Gemini API returned ${response.status}: ${errorText}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                aiResponse = result.candidates[0].content.parts[0].text;
+            } else {
+                throw new Error('Invalid response from Gemini API');
+            }
         }
+            
+        // บันทึกประวัติลง Session
+        req.session.chatHistory.push({ role: 'user', text: userMessage });
+        req.session.chatHistory.push({ role: 'model', text: aiResponse });
+        
+        res.json({ response: aiResponse });
 
     } catch (err) {
         console.error("[ERROR] AI Chat error:", err.message);
