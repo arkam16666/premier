@@ -1627,7 +1627,7 @@ app.post('/api/chat/clear', requireLogin, (req, res) => {
 app.get('/api/models', requireLogin, async (req, res) => {
     try {
         const geminiModels = [
-            { id: 'gemini-3.1-flash-lite', name: 'Gemini 1.5 Flash (Default)' },
+            { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash (Default)' },
             { id: 'gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro' }
         ];
 
@@ -1768,7 +1768,10 @@ app.post('/api/chat', requireLogin, async (req, res) => {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Gemini API returned ${response.status}: ${errorText}`);
+                let errorData;
+                try { errorData = JSON.parse(errorText); } catch(e) {}
+                const errorMessage = errorData?.error?.message || errorText;
+                throw new Error(`Google Gemini API error (${response.status}): ${errorMessage}`);
             }
 
             const result = await response.json();
@@ -1776,7 +1779,7 @@ app.post('/api/chat', requireLogin, async (req, res) => {
             if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts[0]) {
                 aiResponse = result.candidates[0].content.parts[0].text;
             } else {
-                throw new Error('Invalid response from Gemini API');
+                throw new Error('Invalid response format from Google Gemini API');
             }
         }
             
@@ -1788,7 +1791,7 @@ app.post('/api/chat', requireLogin, async (req, res) => {
 
     } catch (err) {
         console.error("[ERROR] AI Chat error:", err.message);
-        res.status(500).json({ error: `ไม่สามารถเชื่อมต่อกับ Gemini AI ได้: ${err.message}` });
+        res.status(500).json({ error: `AI Error: ${err.message}` });
     }
 });
 
