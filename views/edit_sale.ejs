@@ -123,7 +123,7 @@
                                                 <td>
                                                     <% if (key === 'สถานะเอกสาร') { %>
                                                         <span class="status-badge <%= val === 'สำเร็จ' || val === 'ยืนยันแล้ว' ? 'status-success' : 'status-pending' %>">
-                                                            <%= val === 'สำเร็จ' ? 'ยืนยันแล้ว' : (val || 'ยังไม่ยืนยัน') %>
+                                                            <%= val || 'ยังไม่ยืนยัน' %>
                                                         </span>
                                                     <% } else { %>
                                                         <%= val %>

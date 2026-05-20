@@ -466,9 +466,8 @@ app.get("/sale_pr", async (req, res) => {
             allowedHeaders.forEach((h) => { 
                 const rawVal = (row[h] || "").toString().trim();
                 if (h === 'สถานะเอกสาร') {
-                    // ปรับ Logic การ Map สถานะให้แม่นยำขึ้น (รองรับทั้ง 'สำเร็จ' และ 'ยืนยันแล้ว')
-                    const isConfirmed = ['สำเร็จ', 'ยืนยันแล้ว'].includes(rawVal);
-                    obj[h] = isConfirmed ? 'ยืนยันแล้ว' : 'ยังไม่ยืนยัน';
+                    // อ้างอิงจาก Database ตรงๆ ถ้าไม่มีค่าให้เป็น 'ยังไม่ยืนยัน'
+                    obj[h] = rawVal || 'ยังไม่ยืนยัน';
                 } else {
                     obj[h] = rawVal;
                 }
@@ -485,7 +484,14 @@ app.get("/sale_pr", async (req, res) => {
         }
 
         if (statusFilter !== "ทั้งหมด") {
-            filteredData = filteredData.filter(item => item['สถานะเอกสาร'] === statusFilter);
+            filteredData = filteredData.filter(item => {
+                if (statusFilter === "ยืนยันแล้ว") {
+                    return ["ยืนยันแล้ว", "สำเร็จ"].includes(item['สถานะเอกสาร']);
+                } else if (statusFilter === "ยังไม่ยืนยัน") {
+                    return !["ยืนยันแล้ว", "สำเร็จ"].includes(item['สถานะเอกสาร']);
+                }
+                return item['สถานะเอกสาร'] === statusFilter;
+            });
         }
 
         res.render("sale_pr", {
@@ -1077,15 +1083,14 @@ app.post("/api/confirm-webhook", async (req, res) => {
 
         // 5. Update the target row
         const currentRow = [...(allRows[rowIndex] || [])];
-        while (currentRow.length <= Math.max(dateColIndex, editorColIndex, statusColIndex)) {
+        while (currentRow.length <= Math.max(dateColIndex, editorColIndex)) {
             currentRow.push("");
         }
 
-        currentRow[statusColIndex] = "สำเร็จ";
         currentRow[dateColIndex] = dateStr;
         currentRow[editorColIndex] = userName;
 
-        console.log("Updating record with status 'สำเร็จ', date and editor...");
+        console.log("Updating record with date and editor...");
         await sheetsWrite.spreadsheets.values.update({
             spreadsheetId: process.env.GOOGLE_SHEET_ID,
             range: `${sheetName}!A${rowIndex + 1}`,
@@ -1096,7 +1101,7 @@ app.post("/api/confirm-webhook", async (req, res) => {
         // ล้าง Cache เพื่อให้หน้าเว็บอัปเดตทันที
         sheetCache.delete(`${sheetName}_all`);
 
-        console.log(`ยืนยัน ID: ${id} และเปลี่ยนสถานะเป็น 'สำเร็จ' โดย ${userName} เวลา ${dateStr}`);
+        console.log(`ยืนยัน ID: ${id} โดย ${userName} เวลา ${dateStr}`);
 
         // 6. Call the webhook
         const typeColIndex = headers.indexOf("ประเภทธุรกรรม");

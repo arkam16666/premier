@@ -99,7 +99,7 @@
                 <% Object.entries(row).forEach(([key, val])=> { %>
                   <td>
                     <% if (key === 'สถานะเอกสาร') { %>
-                      <span class="status-badge <%= val === 'ยืนยันแล้ว' ? 'status-success' : 'status-pending' %>">
+                      <span class="status-badge <%= (val === 'ยืนยันแล้ว' || val === 'สำเร็จ') ? 'status-success' : 'status-pending' %>">
                         <%= val %>
                       </span>
                     <% } else { %>
@@ -114,7 +114,7 @@
                       </a>
                     </td>
                     <td style="text-align: center;">
-                      <% if (row['สถานะเอกสาร'] !== 'ยืนยันแล้ว') { %>
+                      <% if (!['ยืนยันแล้ว', 'สำเร็จ'].includes(row['สถานะเอกสาร'])) { %>
                         <a href="javascript:void(0);" onclick="confirmSendWebhook(this, '<%= row['id'] %>')"
                           class="action-btn confirm-btn">
                           <i class="fas fa-paper-plane"></i>
