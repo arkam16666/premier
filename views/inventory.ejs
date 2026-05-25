@@ -11,10 +11,60 @@
     <link rel="stylesheet" href="menubar.css">
     <link rel="stylesheet" href="sale_pr.css">
     <link rel="stylesheet" href="inventory.css">
+    <link rel="stylesheet" href="model.css">
     <link rel="stylesheet" href="ai_widget.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>คลังสินค้า - ERP System</title>
+    <style>
+        .edit-form-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 20px 24px;
+        }
+        .edit-form-group {
+            margin-bottom: 5px;
+        }
+        .edit-form-group.full-width {
+            grid-column: span 2;
+        }
+        .edit-form-group label {
+            display: block;
+            color: #ff7eb3;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .edit-form-input {
+            width: 100%;
+            padding: 10px;
+            background: #25163d;
+            border: 1px solid #2a1b3d;
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+            box-sizing: border-box;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 0.9rem;
+        }
+        .edit-form-input:focus {
+            border-color: #ff7eb3;
+            box-shadow: 0 0 5px rgba(255, 126, 179, 0.3);
+        }
+        .section-title {
+            grid-column: span 2;
+            color: #a786ff;
+            font-size: 1rem;
+            font-weight: 600;
+            border-bottom: 1px solid #2a1b3d;
+            padding-bottom: 5px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
 </head>
 
 <body>
@@ -68,6 +118,7 @@
                             <th>จำนวน</th>
                             <th>หน่วย</th>
                             <th>แบรนด์</th>
+                            <th>ราคาขาย</th>
                             <th style="text-align: center;">จัดการ</th>
                         <% } %>
                     </tr>
@@ -86,8 +137,11 @@
                                 </td>
                                 <td><%= row['หน่วย'] %></td>
                                 <td><%= row['แบรนด์'] %></td>
+                                <td><%= row['ราคาขาย'] %></td>
                                 <td style="text-align: center;">
-                                    <a href="#" class="action-icon"><i class="fas fa-pencil"></i></a>
+                                    <a href="javascript:void(0)" class="action-icon" onclick='openEditModal(<%- JSON.stringify(row) %>)'>
+                                        <i class="fas fa-pencil"></i>
+                                    </a>
                                 </td>
                             </tr>
                         <% }) %>
@@ -104,7 +158,109 @@
         </div>
     </main>
 
+    <!-- Modal แก้ไขสินค้า -->
+    <div id="editProductModal" class="modal-overlay">
+        <div class="modal-panel" style="max-width: 800px; max-height: 90vh;">
+            <div class="modal-header">
+                <h2>จัดการข้อมูลสินค้าโดยละเอียด</h2>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-id">
+                <div class="edit-form-container">
+                    <!-- ส่วนที่ 1: ข้อมูลพื้นฐาน -->
+                    <div class="section-title"><i class="fas fa-info-circle"></i> ข้อมูลพื้นฐาน</div>
+                    <div class="edit-form-group">
+                        <label>รหัสสินค้า</label>
+                        <input type="text" id="edit-code" class="edit-form-input" readonly style="opacity: 0.7;">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>บาร์โค้ด</label>
+                        <input type="text" id="edit-barcode" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group full-width">
+                        <label>ชื่อสินค้า</label>
+                        <input type="text" id="edit-name" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group full-width">
+                        <label>ชื่อจำเพราะ (Specification)</label>
+                        <input type="text" id="edit-spec" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>แบรนด์</label>
+                        <input type="text" id="edit-brand" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>หน่วย</label>
+                        <input type="text" id="edit-unit" class="edit-form-input">
+                    </div>
 
+                    <!-- ส่วนที่ 2: หมวดหมู่และสถานะ -->
+                    <div class="section-title"><i class="fas fa-tags"></i> หมวดหมู่และสถานะ</div>
+                    <div class="edit-form-group">
+                        <label>ประเภทสินค้า 1</label>
+                        <input type="text" id="edit-type1" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>ประเภทสินค้า 2</label>
+                        <input type="text" id="edit-type2" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>กลุ่มสินค้า</label>
+                        <input type="text" id="edit-group" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>สถานะ</label>
+                        <select id="edit-status" class="edit-form-input">
+                            <option value="ใช้งาน">ใช้งาน</option>
+                            <option value="ระงับ">ระงับ</option>
+                        </select>
+                    </div>
+
+                    <!-- ส่วนที่ 3: ราคาและภาษี -->
+                    <div class="section-title"><i class="fas fa-money-bill-wave"></i> ราคาและภาษี</div>
+                    <div class="edit-form-group">
+                        <label>ราคาซื้อ (Cost)</label>
+                        <input type="number" id="edit-cost" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>ราคาขาย (Price)</label>
+                        <input type="number" id="edit-price" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>อัตราภาษีซื้อ</label>
+                        <input type="text" id="edit-tax-buy" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>อัตราภาษีขาย</label>
+                        <input type="text" id="edit-tax-sell" class="edit-form-input">
+                    </div>
+
+                    <!-- ส่วนที่ 4: อื่นๆ -->
+                    <div class="section-title"><i class="fas fa-ellipsis-h"></i> ข้อมูลเพิ่มเติม</div>
+                    <div class="edit-form-group">
+                        <label>จำกัดจำนวน</label>
+                        <input type="number" id="edit-limit" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group">
+                        <label>คีย์เวิร์ด (Keywords)</label>
+                        <input type="text" id="edit-keywords" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group full-width">
+                        <label>หมายเหตุ 1</label>
+                        <input type="text" id="edit-note1" class="edit-form-input">
+                    </div>
+                    <div class="edit-form-group full-width">
+                        <label>หมายเหตุ 2</label>
+                        <input type="text" id="edit-note2" class="edit-form-input">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEditModal()">ยกเลิก</button>
+                <button class="btn-confirm" onclick="saveProductChanges()">บันทึกการเปลี่ยนแปลง</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Show loading immediately on start
@@ -123,6 +279,97 @@
         window.addEventListener('load', function() {
             Swal.close();
         });
+
+        function openEditModal(product) {
+            document.getElementById('edit-id').value = product['รหัส'];
+            document.getElementById('edit-code').value = product['รหัส'];
+            document.getElementById('edit-barcode').value = product['บาร์โค๊ด'] || "";
+            document.getElementById('edit-name').value = product['ชื่อ'] || "";
+            document.getElementById('edit-spec').value = product['ชื่อจำเพราะ'] || "";
+            document.getElementById('edit-brand').value = product['แบรนด์'] || "";
+            document.getElementById('edit-unit').value = product['หน่วย'] || "";
+            
+            document.getElementById('edit-type1').value = product['ประเภทสินค้า'] || "";
+            document.getElementById('edit-type2').value = product['ประเภทสินค้า2'] || "";
+            document.getElementById('edit-group').value = product['กลุ่มสินค้า'] || "";
+            document.getElementById('edit-status').value = product['สถานะ'] || "ใช้งาน";
+            
+            document.getElementById('edit-cost').value = product['ราคาซื้อ'] || 0;
+            document.getElementById('edit-price').value = product['ราคาขาย'] || 0;
+            document.getElementById('edit-tax-buy').value = product['อัตราภาษีซื้อ'] || "0%";
+            document.getElementById('edit-tax-sell').value = product['อัตราภาษีขาย'] || "0%";
+            
+            document.getElementById('edit-limit').value = product['จำกัดจำนวน'] || 0;
+            document.getElementById('edit-keywords').value = product['ครีเวิด'] || "";
+            document.getElementById('edit-note1').value = product['หมายเหตุ1'] || "";
+            document.getElementById('edit-note2').value = product['หมายเหตุ2'] || "";
+            
+            document.getElementById('editProductModal').classList.add('show');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editProductModal').classList.remove('show');
+        }
+
+        async function saveProductChanges() {
+            const id = document.getElementById('edit-id').value;
+            const updatedData = {
+                'ชื่อ': document.getElementById('edit-name').value,
+                'ชื่อจำเพราะ': document.getElementById('edit-spec').value,
+                'หน่วย': document.getElementById('edit-unit').value,
+                'ประเภทสินค้า': document.getElementById('edit-type1').value,
+                'ประเภทสินค้า2': document.getElementById('edit-type2').value,
+                'ราคาซื้อ': document.getElementById('edit-cost').value,
+                'ราคาขาย': document.getElementById('edit-price').value,
+                'อัตราภาษีซื้อ': document.getElementById('edit-tax-buy').value,
+                'อัตราภาษีขาย': document.getElementById('edit-tax-sell').value,
+                'บาร์โค๊ด': document.getElementById('edit-barcode').value,
+                'ครีเวิด': document.getElementById('edit-keywords').value,
+                'จำกัดจำนวน': document.getElementById('edit-limit').value,
+                'สถานะ': document.getElementById('edit-status').value,
+                'แบรนด์': document.getElementById('edit-brand').value,
+                'กลุ่มสินค้า': document.getElementById('edit-group').value,
+                'หมายเหตุ1': document.getElementById('edit-note1').value,
+                'หมายเหตุ2': document.getElementById('edit-note2').value
+            };
+
+            Swal.fire({
+                title: 'กำลังบันทึก...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                background: '#1d112e',
+                color: '#fff'
+            });
+
+            try {
+                const response = await fetch('/api/update_product', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, updatedData })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ',
+                        text: result.message,
+                        background: '#1d112e',
+                        color: '#fff'
+                    }).then(() => location.reload());
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ข้อผิดพลาด',
+                    text: error.message,
+                    background: '#1d112e',
+                    color: '#fff'
+                });
+            }
+        }
 
         // Show loading when form is submitted
         document.querySelector('.search-container').addEventListener('submit', function() {
