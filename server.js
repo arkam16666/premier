@@ -133,9 +133,10 @@ app.use(requireLogin);
 app.use('/', require('./routes/dashboard')(dependencies));
 app.use('/', require('./routes/sales')(dependencies));
 app.use('/', require('./routes/inventory')(dependencies));
+app.use('/', require('./routes/pr')(dependencies));
 app.use('/', require('./routes/ai')(dependencies));
 app.use('/', require('./routes/api')(dependencies));
 
 app.listen(process.env.PORT || 5000, "0.0.0.0", () =>
-    console.log(`Server running on port ${process.env.PORT || 5000}`)
+    console.log(`Server running on port http://localhost:${process.env.PORT || 5000}`)
 );

@@ -20,9 +20,10 @@ module.exports = (dependencies) => {
     router.get("/sale_pr", async (req, res) => {
         try {
             const data = await getsheet(null, "Sale_pr");
-            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
+            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
             const statusFilter = (req.query.status || "ทั้งหมด");
+
 
             let filteredData = data.map(row => {
                 let obj = {};
@@ -187,13 +188,33 @@ module.exports = (dependencies) => {
     // --- Sale SO Routes ---
     router.get("/sale_so", async (req, res) => {
         try {
-            const data = await getsheet(null, "sales_so");
-            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์"];
+            const [data, subData] = await Promise.all([
+                getsheet(null, "sales_so"),
+                getsheet(null, "sub_sales_so")
+            ]);
+
+            // Calculate totals from sub_sales_so
+            const totalsMap = {};
+            subData.forEach(row => {
+                const id = String(row['id']).trim();
+                const amount = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
+                if (!isNaN(amount)) {
+                    totalsMap[id] = (totalsMap[id] || 0) + amount;
+                }
+            });
+
+            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
 
             let filteredData = data.map(row => {
                 let obj = {};
-                allowedHeaders.forEach((h) => { if (row[h]) obj[h] = row[h]; });
+                allowedHeaders.forEach((h) => { 
+                    if (h === 'จำนวนเงินรวม') {
+                        obj[h] = (totalsMap[String(row['id']).trim()] || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    } else if (row[h]) {
+                        obj[h] = row[h];
+                    }
+                });
                 return obj;
             }).filter(obj => Object.keys(obj).length > 0);
 

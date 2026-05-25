@@ -91,9 +91,9 @@ function recalculateTotals() {
 
         var productInfo = allProducts.find(p => p['รหัส'] === productCode);
         if (productInfo) {
-            var price = parseFloat(productInfo['ราคาขาย']) || 0;
+            var price = parseFloat(productInfo['ราคาซื้อ']) || 0;
             var amount = price * qty;
-            var taxRateStr = (productInfo['อัตราภาษีขาย'] || "0").toString().replace('%', '');
+            var taxRateStr = (productInfo['อัตราภาษีซื้อ'] || "0").toString().replace('%', '');
             var taxRate = parseFloat(taxRateStr) || 0;
             var tax = amount * (taxRate / 100);
             var total = amount + tax;
@@ -135,17 +135,17 @@ document.addEventListener('change', function(e) {
 
     var row = e.target.closest('tr');
     if (e.target.checked) {
-        row.style.background = 'rgba(255, 126, 179, 0.08)';
+        row.style.background = 'rgba(255, 126, 179, 0.08)'; // Pink theme
     } else {
         row.style.background = '';
     }
 });
 
-// เพิ่มสินค้าที่เลือก (Updated for Item Grouping & Editable Quantity + Checkbox)
+// เพิ่มสินค้าที่เลือก (Updated for Purchase)
 function addSelectedProducts() {
     var rows = document.querySelectorAll('.modal-table tbody tr');
     var selectedProducts = [];
-    var tableBody = document.getElementById('salePrBody');
+    var tableBody = document.getElementById('purchasePrBody'); // Changed from salePrBody
 
     rows.forEach(function(row) {
         var checkbox = row.querySelector('.product-checkbox');
@@ -159,7 +159,7 @@ function addSelectedProducts() {
                 var qtyToAdd = parseFloat(qtyInput.value);
                 
                 // Check if product already exists in the table
-                var existingRow = document.querySelector(`#salePrBody tr[data-product="${productCode}"]`);
+                var existingRow = document.querySelector(`#purchasePrBody tr[data-product="${productCode}"]`);
                 
                 if (existingRow) {
                     // Update existing quantity
@@ -176,9 +176,9 @@ function addSelectedProducts() {
                     newRow.className = 'item-row pending-add';
                     newRow.setAttribute('data-product', productCode);
                     
-                    var price = parseFloat(fullProduct['ราคาขาย']) || 0;
+                    var price = parseFloat(fullProduct['ราคาซื้อ']) || 0; // Changed from ราคาขาย
                     var amount = price * qtyToAdd;
-                    var taxRateStr = (fullProduct['อัตราภาษีขาย'] || "0").toString().replace('%', '');
+                    var taxRateStr = (fullProduct['อัตราภาษีซื้อ'] || "0").toString().replace('%', ''); // Changed from อัตราภาษีขาย
                     var taxRate = parseFloat(taxRateStr) || 0;
                     var tax = amount * (taxRate / 100);
                     var total = amount + tax;

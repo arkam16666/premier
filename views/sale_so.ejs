@@ -29,7 +29,7 @@
       <a href="<%= baseUrl %>/add_sale">เพิ่มออเดอร์</a>
       <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
       <a href="<%= baseUrl %>/sale_so" class="active">Sale SO</a>
-      <a href="#">เสนอซื้อ</a>
+      <a href="<%= baseUrl %>/precher_pr">เสนอซื้อ</a>
       <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
       <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
     </nav>
@@ -45,10 +45,45 @@
     </div>
   </aside>
 
-  <main style="padding: 20px;">
-    <h1 style="color: #ff7eb3; margin-bottom: 25px;">
+  <main>
+    <h1>
         <i class="fas fa-file-contract"></i> รายการสั่งขาย (Sale SO)
     </h1>
+
+    <div class="summary-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
+      <div class="stat-card" style="background: #150c22; border: 1px solid #281a3d; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 15px;">
+        <div class="stat-icon" style="width: 48px; height: 48px; border-radius: 10px; background: rgba(255, 126, 179, 0.15); color: #ff7eb3; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+          <i class="fas fa-coins"></i>
+        </div>
+        <div>
+          <div style="color: #a0a0b5; font-size: 0.9rem; margin-bottom: 4px;">ยอดเงินรวมทั้งหมด (ที่แสดง)</div>
+          <div style="font-size: 1.4rem; font-weight: 600; color: #fff;">
+            <% 
+              let totalSum = 0;
+              if (data && data.length > 0) {
+                data.forEach(row => {
+                  const val = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
+                  if (!isNaN(val)) totalSum += val;
+                });
+              }
+            %>
+            ฿<%= totalSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card" style="background: #150c22; border: 1px solid #281a3d; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 15px;">
+        <div class="stat-icon" style="width: 48px; height: 48px; border-radius: 10px; background: rgba(74, 144, 226, 0.15); color: #4a90e2; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+          <i class="fas fa-file-invoice"></i>
+        </div>
+        <div>
+          <div style="color: #a0a0b5; font-size: 0.9rem; margin-bottom: 4px;">จำนวนรายการทั้งหมด</div>
+          <div style="font-size: 1.4rem; font-weight: 600; color: #fff;">
+            <%= data ? data.length : 0 %> รายการ
+          </div>
+        </div>
+      </div>
+    </div>
 
     <form action="/sale_so" method="GET" class="search-container">
       <input type="text" name="search" class="search-input" value="<%= search %>" placeholder="ค้นหาด้วย ID ใน Sale SO">
@@ -63,7 +98,7 @@
     </form>
 
 
-    <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+    <div class="table-responsive">
       <table>
         <thead>
           <tr>
@@ -95,19 +130,19 @@
                   <% }) %>
 
                     <td style="text-align: center;">
-                      <a href="/edit_sale_so?id=<%= row['id'] %>" class="action-btn edit-btn">
-                        <i class="fas fa-pencil"></i>
+                      <a href="/edit_sale_so?id=<%= row['id'] %>" class="action-btn edit-btn" title="แก้ไข">
+                        <i class="fas fa-edit"></i>
                       </a>
                     </td>
                     <td style="text-align: center;">
-                      <a href="javascript:void(0);" onclick="deleteItem(this, '<%= row['id'] %>')" class="action-btn delete-btn">
+                      <a href="javascript:void(0);" onclick="deleteItem(this, '<%= row['id'] %>')" class="action-btn delete-btn" title="ลบ">
                         <i class="fa-solid fa-trash"></i>
                       </a>
                     </td>
               </tr>
               <% }) } else { %>
                 <tr>
-                  <td colspan="100%" style="text-align: center; padding: 50px; font-style: italic; color: #666;">
+                  <td colspan="100%">
                     ไม่มีข้อมูลในระบบ Sale SO
                   </td>
                 </tr>

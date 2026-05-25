@@ -7,59 +7,53 @@
 body {
     display: flex;
     align-items: flex-start;
-    background-color: #0f0a1a;
+    background-color: #0b0714;
+    color: #e0e0e0;
+    font-family: 'Kanit', 'Sarabun', sans-serif;
 }
 
-.menu a:hover:not(.active) {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: translateX(5px);
-}
-
-/* จัดการพื้นที่หลัก */
 main {
     top: 0;
-    background-color: #0f0a1a;
+    background-color: #0b0714;
     min-height: 100vh;
     color: white;
     margin-left: 200px;
     width: calc(100% - 200px);
-    animation: fadeInUp 0.6s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    padding: 30px;
+    animation: fadeIn 0.6s ease-out;
 }
 
 /* แต่งตาราง */
 table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     margin-top: 20px;
-    background-color: #1a0b2e;
-    border-radius: 15px;
+    background-color: #150c22;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    animation: scaleIn 0.5s 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 /* ส่วนหัวตาราง */
 th {
-    background-color: #25163d;
-    color: #ff7eb3; /* สีชมพู */
-    font-weight: 500;
+    background-color: #1d112e;
+    color: #ff7eb3;
+    font-weight: 600;
     text-align: left;
     padding: 15px;
-    border-bottom: 2px solid #2a1b3d;
-    text-transform: uppercase;
+    border-bottom: 1px solid #281a3d;
     font-size: 14px;
-    letter-spacing: 1px;
-    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* ส่วนเนื้อหา */
 td {
-    padding: 14px 15px;
-    border-bottom: 1px solid #2a1b3d;
+    padding: 15px;
+    border-bottom: 1px solid #1d112e;
     color: #e0e0e0;
-    font-size: 15px;
-    white-space: nowrap;
+    font-size: 14px;
+    vertical-align: middle;
 }
 
 /* แถวตาราง */
@@ -72,109 +66,129 @@ tbody tr {
     animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
-tbody tr:nth-child(1) { animation-delay: 0.55s; }
-tbody tr:nth-child(2) { animation-delay: 0.62s; }
-tbody tr:nth-child(3) { animation-delay: 0.69s; }
-tbody tr:nth-child(4) { animation-delay: 0.76s; }
-tbody tr:nth-child(5) { animation-delay: 0.83s; }
-tbody tr:nth-child(6) { animation-delay: 0.90s; }
-tbody tr:nth-child(7) { animation-delay: 0.97s; }
-tbody tr:nth-child(8) { animation-delay: 1.04s; }
-tbody tr:nth-child(9) { animation-delay: 1.11s; }
-tbody tr:nth-child(10) { animation-delay: 1.18s; }
+tbody tr:nth-child(1) { animation-delay: 0.1s; }
+tbody tr:nth-child(2) { animation-delay: 0.15s; }
+tbody tr:nth-child(3) { animation-delay: 0.2s; }
+tbody tr:nth-child(4) { animation-delay: 0.25s; }
+tbody tr:nth-child(5) { animation-delay: 0.3s; }
+tbody tr:nth-child(6) { animation-delay: 0.35s; }
+tbody tr:nth-child(7) { animation-delay: 0.4s; }
+tbody tr:nth-child(8) { animation-delay: 0.45s; }
 
 /* Hover Effect ให้แถวสว่างขึ้นเมื่อชี้ */
 tr:hover td {
     background-color: rgba(255, 255, 255, 0.05);
     color: white;
-    cursor: pointer;
+}
+
+/* ตกแต่งข้อความ "ไม่มีข้อมูล" */
+td[colspan="100%"] {
+    text-align: center;
+    padding: 60px;
+    color: #666;
+    font-style: italic;
+    font-size: 1.1rem;
 }
 
 /* คลุมส่วนของฟอร์มค้นหา */
 .search-container {
-    background: #30045a17;
+    background: rgba(48, 4, 90, 0.1);
     padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    margin-bottom: 25px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    margin-bottom: 30px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    animation: fadeInUp 0.5s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    gap: 15px;
+    animation: fadeInUp 0.5s 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 /* ปรับแต่งช่อง Input */
 .search-input {
     flex-grow: 1;
-    padding: 12px 16px;
-    border: 2px solid #ece2f0;
-    border-radius: 8px;
+    padding: 12px 18px;
+    border: 2px solid #281a3d;
+    background-color: #150c22;
+    color: white;
+    border-radius: 10px;
     font-family: 'Kanit', sans-serif;
-    font-size: 14px;
+    font-size: 15px;
     transition: all 0.3s ease;
     outline: none;
 }
 
 .search-input:focus {
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    border-color: #ff7eb3;
+    box-shadow: 0 0 0 4px rgba(255, 126, 179, 0.15);
+    background-color: #1a0f2b;
 }
 
 /* ปุ่มค้นหา */
 .btn-search {
-    background-color: #4a90e2;
+    background: linear-gradient(135deg, #ff7eb3 0%, #ff2d88 100%);
     color: white;
-    padding: 12px 24px;
+    padding: 12px 28px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-family: 'Kanit', sans-serif;
     font-weight: 500;
+    font-size: 15px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(255, 45, 136, 0.3);
 }
 
 .btn-search:hover {
-    background-color: #357abd;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(255, 45, 136, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn-search:active {
+    transform: translateY(0);
 }
 
 /* ปุ่มล้างค่า */
 .btn-clear {
     text-decoration: none;
-    color: #64748b;
+    color: #a0a0b5;
     font-family: 'Kanit', sans-serif;
-    font-size: 14px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    transition: all 0.2s;
+    font-size: 15px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
 }
 
 .btn-clear:hover {
-    background-color: #7a31da;
+    background-color: rgba(255, 255, 255, 0.05);
     color: white;
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Status Badges */
 .status-badge {
-    padding: 6px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
     font-size: 12px;
     font-weight: 500;
-    text-transform: uppercase;
+    display: inline-block;
 }
 
 .status-success {
-    background-color: rgba(40, 167, 69, 0.2);
-    color: #28a745;
-    border: 1px solid rgba(40, 167, 69, 0.3);
+    background-color: rgba(40, 167, 69, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(40, 167, 69, 0.2);
 }
 
 .status-pending {
-    background-color: rgba(255, 193, 7, 0.2);
-    color: #ffc107;
-    border: 1px solid rgba(255, 193, 7, 0.3);
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #f1c40f;
+    border: 1px solid rgba(255, 193, 7, 0.2);
 }
 
 /* Action Buttons */
@@ -182,49 +196,73 @@ tr:hover td {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     text-decoration: none;
 }
 
+.action-btn:hover {
+    transform: scale(1.1);
+}
+
 .edit-btn {
-    background-color: rgba(74, 144, 226, 0.1);
-    color: #4a90e2;
+    background-color: rgba(255, 126, 179, 0.1);
+    color: #ff7eb3;
 }
 
 .edit-btn:hover {
-    background-color: #4a90e2;
+    background-color: #ff7eb3;
     color: white;
 }
 
 .confirm-btn {
-    background-color: rgba(40, 167, 69, 0.1);
-    color: #28a745;
+    background-color: rgba(46, 204, 113, 0.1);
+    color: #2ecc71;
 }
 
 .confirm-btn:hover {
-    background-color: #28a745;
+    background-color: #2ecc71;
     color: white;
 }
 
 .delete-btn {
-    background-color: rgba(220, 53, 69, 0.1);
-    color: #dc3545;
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
 }
 
 .delete-btn:hover {
-    background-color: #dc3545;
+    background-color: #e74c3c;
     color: white;
 }
 
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-@keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    main {
+        margin-left: 0;
+        width: 100%;
+        padding: 15px;
+    }
+    
+    .search-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }

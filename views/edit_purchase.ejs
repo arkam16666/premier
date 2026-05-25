@@ -9,12 +9,18 @@
         href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="menubar.css">
-    <link rel="stylesheet" href="edit_sale.css">
+    <link rel="stylesheet" href="edit_sale.css"> <!-- Keep using edit_sale.css for layout -->
     <link rel="stylesheet" href="model.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <title>แก้ไขออเดอร์</title>
+    <title>แก้ไขรายการเสนอซื้อ</title>
     <style>
+        /* Override some colors for pink theme */
+        th { color: #ff7eb3 !important; }
+        .status-badge.status-success { background-color: rgba(40, 167, 69, 0.2); color: #28a745; }
+        .btn-confirm, #btnSaveChanges { background-color: #ff7eb3 !important; }
+        .btn-search { background-color: #ff7eb3 !important; }
+        
         /* Pretty Quantity Input */
         .item-qty {
             width: 70px;
@@ -55,13 +61,8 @@
             accent-color: #ff7eb3;
         }
 
-        .text-right {
-            text-align: right !important;
-        }
-
-        .text-center {
-            text-align: center !important;
-        }
+        .text-right { text-align: right !important; }
+        .text-center { text-align: center !important; }
     </style>
 </head>
 
@@ -75,14 +76,13 @@
         <nav class="menu">
             <a href="<%= baseUrl %>/">Dashboard</a>
             <a href="<%= baseUrl %>/add_sale">เพิ่มออเดอร์</a>
-            <a href="<%= baseUrl %>/sale_pr" class="active">เสนอขาย</a>
+            <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
             <a href="<%= baseUrl %>/sale_so">Sale SO</a>
-            <a href="<%= baseUrl %>/precher_pr">เสนอซื้อ</a>
+            <a href="<%= baseUrl %>/precher_pr" class="active">เสนอซื้อ</a>
             <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
             <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
         </nav>
-        <div
-            style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div style="margin-top: auto; padding: 20px 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="color: #a0a0b5; margin-bottom: 10px; font-size: 0.9rem;">
                 <i class="fas fa-user-circle"></i>
                 <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
@@ -95,10 +95,10 @@
     <main style="padding: 20px;">
 
         <% if (order && order.length> 0) { %>
-            <h1>แก้ไขข้อมูลการเสนอขาย สำหรับ <%= order[0]['ลูกค้า-ผู้ขาย'] %>
+            <h1>แก้ไขข้อมูลการเสนอซื้อ สำหรับ <%= order[0]['ลูกค้า-ผู้ขาย'] %>
             </h1>
             <% } else { %>
-                <h1>แก้ไขข้อมูลการเสนอขาย</h1>
+                <h1>แก้ไขข้อมูลการเสนอซื้อ</h1>
                 <% } %>
 
                     <!-- Summary Cards -->
@@ -112,8 +112,8 @@
                             <div id="summaryGrandTotal" style="font-size: 1.4rem; font-weight: 600; color: #fff;">
                               <% 
                                 let totalSum = 0;
-                                if (sale_pr && sale_pr.length > 0) {
-                                    sale_pr.forEach(row => {
+                                if (purchase_pr && purchase_pr.length > 0) {
+                                    purchase_pr.forEach(row => {
                                     const val = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
                                     if (!isNaN(val)) totalSum += val;
                                   });
@@ -123,7 +123,7 @@
                             </div>
                           </div>
                         </div>
-
+                  
                         <div class="stat-card" style="background: #150c22; border: 1px solid #281a3d; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 15px;">
                           <div class="stat-icon" style="width: 48px; height: 48px; border-radius: 10px; background: rgba(74, 144, 226, 0.15); color: #4a90e2; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
                             <i class="fas fa-file-invoice"></i>
@@ -131,14 +131,13 @@
                           <div>
                             <div style="color: #a0a0b5; font-size: 0.9rem; margin-bottom: 4px;">จำนวนรายการสินค้า</div>
                             <div id="summaryItemCount" style="font-size: 1.4rem; font-weight: 600; color: #fff;">
-                              <%= sale_pr ? sale_pr.length : 0 %> รายการ
+                              <%= purchase_pr ? purchase_pr.length : 0 %> รายการ
                             </div>
                           </div>
                         </div>
                     </div>
 
                     <div class="table-responsive" style="overflow-x: auto; width: 100%;">
-
                         <table>
                             <thead>
                                 <tr>
@@ -182,7 +181,7 @@
                         </table>
                     </div>
 
-                    <form action="/edit_sale" method="GET" class="search-form">
+                    <form action="/edit_purchase" method="GET" class="search-form">
                         <input type="hidden" name="id" value="<%= idToEdit %>">
                         <div class="search-input-group">
                             <i class="fas fa-search"></i>
@@ -192,7 +191,7 @@
                         <button type="submit" class="btn-search">
                             <i class="fas fa-search"></i> ค้นหา
                         </button>
-                        <a href="/sale_pr" class="btn-clear">
+                        <a href="/precher_pr" class="btn-clear">
                             <i class="fas fa-sync-alt"></i> ล้างค่า
                         </a>
                     </form>
@@ -213,9 +212,9 @@
                                     <th class="text-right">จำนวนเงินรวม</th>
                                 </tr>
                             </thead>
-                            <tbody id="salePrBody">
-                                <% if (sale_pr && sale_pr.length> 0) { %>
-                                    <% sale_pr.forEach(row=> { %>
+                            <tbody id="purchasePrBody">
+                                <% if (purchase_pr && purchase_pr.length> 0) { %>
+                                    <% purchase_pr.forEach(row=> { %>
                                         <tr class="item-row" data-product="<%= row['สินค้า'] %>">
                                             <td class="text-center">
                                                 <input type="checkbox" class="item-checkbox">
@@ -251,13 +250,13 @@
                             <script>
                                 // ข้อมูลพื้นฐานที่จำเป็นสำหรับ Modal และการบันทึก
                                 var allProducts = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(allProducts || [])) %>'));
-                                var rawSubSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
+                                var rawSubPurchaseData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
                                 var rawOrderData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(order || [])) %>'));
-                                var rawSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawSalesData || [])) %>'));
+                                var rawPurchaseData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawPurchaseData || [])) %>'));
                                 var currentEditId = '<%= idToEdit %>';
                                 var pendingOrderChanges = null; 
                             </script>
-                            <script src="model.js"></script>
+                            <script src="model_purchase.js"></script>
                             <button type="button" id="btnSoftDelete" onclick="softDelete()">ลบ</button>
                         </div>
                     </div>
@@ -317,7 +316,7 @@
         }
 
         async function saveChanges() {
-            const rows = document.querySelectorAll('#salePrBody .item-row');
+            const rows = document.querySelectorAll('#purchasePrBody .item-row');
             const finalItems = [];
 
             rows.forEach(row => {
@@ -373,7 +372,7 @@
             });
 
             try {
-                const response = await fetch('/api/save_changes', {
+                const response = await fetch('/api/save_changes_purchase', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -412,7 +411,7 @@
         }
 
         async function printPDF() {
-            const rows = document.querySelectorAll('#salePrBody .item-row');
+            const rows = document.querySelectorAll('#purchasePrBody .item-row');
             const itemsList = [];
 
             rows.forEach(row => {
@@ -445,7 +444,7 @@
                 return;
             }
 
-            const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+            const headerData = rawPurchaseData.length > 0 ? rawPurchaseData[0] : {};
             const totalVat = itemsList.reduce((sum, item) => sum + (item.vat || 0), 0);
             const grandTotal = itemsList.reduce((sum, item) => sum + (item.total || 0), 0);
             
@@ -457,7 +456,7 @@
                     sellerName: headerData['ลูกค้า-ผู้ขาย'] || '',
                     note: headerData['โทรศัพท์'] || '',
                     picDepartment: '',
-                    title: 'ใบเสนอราคา ',
+                    title: 'ใบเสนอซื้อ (PR) ',
                     vat: Number(totalVat.toFixed(2)),
                     grandTotal: Number(grandTotal.toFixed(2)),
                     items: itemsList
@@ -493,7 +492,7 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = `Sale_Order_${currentEditId}.pdf`;
+                a.download = `Purchase_PR_${currentEditId}.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
@@ -523,7 +522,7 @@
             const grid = document.getElementById('orderFormGrid');
             grid.innerHTML = '';
 
-            const currentData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+            const currentData = rawPurchaseData.length > 0 ? rawPurchaseData[0] : {};
             orderFields = Object.keys(currentData);
 
             orderFields.forEach(field => {
@@ -567,9 +566,9 @@
 
             pendingOrderChanges = updatedData;
 
-            if (rawSalesData.length > 0) {
+            if (rawPurchaseData.length > 0) {
                 Object.keys(updatedData).forEach(function (key) {
-                    rawSalesData[0][key] = updatedData[key];
+                    rawPurchaseData[0][key] = updatedData[key];
                 });
             }
             
