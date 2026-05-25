@@ -124,7 +124,7 @@ document.addEventListener('input', function(e) {
 
 // คำนวณยอดรวมเมื่อโหลดหน้าเว็บเสร็จ
 document.addEventListener('DOMContentLoaded', function() {
-    recalculateTotals();
+    // recalculateTotals(); // เอาออกเพื่อให้ดึงจาก DB ตรงๆ ในตอนแรก
 });
 
 // ไฮไลท์แถวเมื่อเลือก checkbox

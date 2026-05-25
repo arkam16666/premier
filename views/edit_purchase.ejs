@@ -111,15 +111,9 @@
                             <div style="color: #a0a0b5; font-size: 0.9rem; margin-bottom: 4px;">จำนวนเงินรวมทั้งหมด</div>
                             <div id="summaryGrandTotal" style="font-size: 1.4rem; font-weight: 600; color: #fff;">
                               <% 
-                                let totalSum = 0;
-                                if (purchase_pr && purchase_pr.length > 0) {
-                                    purchase_pr.forEach(row => {
-                                    const val = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
-                                    if (!isNaN(val)) totalSum += val;
-                                  });
-                                }
+                                const dbTotal = (order && order.length > 0) ? parseFloat(String(order[0]['จำนวนเงินรวม'] || 0).replace(/,/g, '')) : 0;
                               %>
-                              ฿<%= totalSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                              ฿<%= dbTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
                             </div>
                           </div>
                         </div>

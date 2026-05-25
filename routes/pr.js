@@ -7,27 +7,7 @@ module.exports = (dependencies) => {
     // --- Precher PR Routes ---
     router.get("/precher_pr", async (req, res) => {
         try {
-            const [data, subData] = await Promise.all([
-                getsheet(null, "Precher_pr"),
-                getsheet(null, "sub_precher_pr")
-            ]);
-
-            // Calculate totals from sub_precher_pr
-            const totalsMap = {};
-            subData.forEach(row => {
-                const id = String(row['id']).trim();
-                const amount = parseFloat(String(row['จำนวนเงิน'] || 0).replace(/,/g, ''));
-                const tax = parseFloat(String(row['ภาษี'] || 0).replace(/,/g, ''));
-                const total = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
-                
-                // Use existing total if available, otherwise sum amount + tax
-                const finalAmount = total > 0 ? total : (amount + tax);
-                
-                if (!isNaN(finalAmount)) {
-                    totalsMap[id] = (totalsMap[id] || 0) + finalAmount;
-                }
-            });
-
+            const data = await getsheet(null, "precher_pr");
             const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
             const statusFilter = (req.query.status || "ทั้งหมด");
@@ -35,15 +15,11 @@ module.exports = (dependencies) => {
             let filteredData = data.map(row => {
                 let obj = {};
                 allowedHeaders.forEach((h) => { 
-                    if (h === 'จำนวนเงินรวม') {
-                        obj[h] = (totalsMap[String(row['id']).trim()] || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    const rawVal = (row[h] || "").toString().trim();
+                    if (h === 'สถานะเอกสาร') {
+                        obj[h] = rawVal || 'ยังไม่ยืนยัน';
                     } else {
-                        const rawVal = (row[h] || "").toString().trim();
-                        if (h === 'สถานะเอกสาร') {
-                            obj[h] = rawVal || 'ยังไม่ยืนยัน';
-                        } else {
-                            obj[h] = rawVal;
-                        }
+                        obj[h] = rawVal;
                     }
                 });
                 return obj;
@@ -81,10 +57,10 @@ module.exports = (dependencies) => {
         const searchQuery = (req.query.search || "").trim().toLowerCase();
         try {
             const subPurchaseData = await getsheet(idToEdit, "sub_precher_pr");
-            const purchaseData = await getsheet(idToEdit, "Precher_pr");
+            const purchaseData = await getsheet(idToEdit, "precher_pr");
             const allProductsRaw = await getsheet(null, "product");
 
-            const purchaseHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
+            const purchaseHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
             const subPurchaseHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี", "จำนวนเงินรวม"];
             const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาซื้อ", "แบรนด์", "อัตราภาษีซื้อ"];
 
@@ -153,6 +129,7 @@ module.exports = (dependencies) => {
                 }
             }
 
+            let grandTotal = 0;
             if (finalItems && finalItems.length > 0) {
                 const values = finalItems.map(p => {
                     const qty = parseFloat(p.quantity) || 0;
@@ -160,12 +137,14 @@ module.exports = (dependencies) => {
                     const taxRate = parseFloat((p['อัตราภาษีซื้อ'] || "0").toString().replace('%', '')) || 0;
                     const amount = qty * price;
                     const tax = amount * (taxRate / 100);
-                    return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, amount + tax];
+                    const total = amount + tax;
+                    grandTotal += total;
+                    return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, total];
                 });
                 await sheetsWrite.spreadsheets.values.append({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A:J`, valueInputOption: "USER_ENTERED", requestBody: { values } });
             }
 
-            const purchaseSheetName = "Precher_pr";
+            const purchaseSheetName = "precher_pr";
             const user = req.session.user;
             const userName = user ? (user['ชื่อภาษาอังกฤษpic'] || 'Unknown') : 'Unknown';
             const dateStr = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -174,15 +153,23 @@ module.exports = (dependencies) => {
             const purchaseRows = purchaseResult.data.values ?? [];
             if (purchaseRows.length > 0) {
                 const purchaseHeaders = purchaseRows[0];
-                const purchaseIdCol = purchaseHeaders.indexOf("id");
-                if (purchaseIdCol !== -1) {
+                const idColIndex = purchaseHeaders.findIndex(h => h.trim() === 'id');
+                
+                if (idColIndex !== -1) {
                     let purchaseRowIndex = -1;
-                    for (let i = 1; i < purchaseRows.length; i++) { if ((purchaseRows[i][purchaseIdCol] || "").toString().trim() === id.trim()) { purchaseRowIndex = i; break; } }
+                    for (let i = 1; i < purchaseRows.length; i++) { if ((purchaseRows[i][idColIndex] || "").toString().trim() === id.trim()) { purchaseRowIndex = i; break; } }
                     if (purchaseRowIndex !== -1) {
                         const purchaseRow = [...(purchaseRows[purchaseRowIndex] || [])];
                         if (orderChanges) { for (let header in orderChanges) { const j = purchaseHeaders.indexOf(header); if (j !== -1) { while (purchaseRow.length <= j) purchaseRow.push(""); purchaseRow[j] = orderChanges[header]; } } }
                         const dateCol = purchaseHeaders.indexOf("วันที่แก้ไขล่าสุด"); if (dateCol !== -1) { while (purchaseRow.length <= dateCol) purchaseRow.push(""); purchaseRow[dateCol] = dateStr; }
                         const editorCol = purchaseHeaders.indexOf("ผู้แก้ไขล่าสุด"); if (editorCol !== -1) { while (purchaseRow.length <= editorCol) purchaseRow.push(""); purchaseRow[editorCol] = userName; }
+                        
+                        const totalCol = purchaseHeaders.indexOf("จำนวนเงินรวม");
+                        if (totalCol !== -1) {
+                            while (purchaseRow.length <= totalCol) purchaseRow.push("");
+                            purchaseRow[totalCol] = grandTotal;
+                        }
+
                         await sheetsWrite.spreadsheets.values.update({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${purchaseSheetName}!A${purchaseRowIndex + 1}`, valueInputOption: "USER_ENTERED", requestBody: { values: [purchaseRow] } });
                     }
                 }
@@ -199,17 +186,17 @@ module.exports = (dependencies) => {
         try {
             const spreadsheetId = process.env.GOOGLE_SHEET_ID;
             const spreadsheet = await sheetsWrite.spreadsheets.get({ spreadsheetId });
-            const purchasePrSheet = spreadsheet.data.sheets.find(s => s.properties.title === "Precher_pr");
+            const purchasePrSheet = spreadsheet.data.sheets.find(s => s.properties.title === "precher_pr");
             const subPurchasePrSheet = spreadsheet.data.sheets.find(s => s.properties.title === "sub_precher_pr");
 
-            const purchasePrRes = await sheetsWrite.spreadsheets.values.get({ spreadsheetId, range: "Precher_pr!A:A" });
+            const purchasePrRes = await sheetsWrite.spreadsheets.values.get({ spreadsheetId, range: "precher_pr!A:A" });
             const purchasePrRows = purchasePrRes.data.values || [];
-            const purchasePrIndex = purchasePrRows.findIndex(row => row[0] === idToDelete);
+            const purchasePrIndex = purchasePrRows.findIndex(row => (row[0] || "").toString().trim() === idToDelete.trim());
 
             const subPurchasePrRes = await sheetsWrite.spreadsheets.values.get({ spreadsheetId, range: "sub_precher_pr!A:A" });
             const subPurchasePrRows = subPurchasePrRes.data.values || [];
             const subPurchasePrIndices = [];
-            subPurchasePrRows.forEach((row, index) => { if (row[0] === idToDelete) subPurchasePrIndices.push(index); });
+            subPurchasePrRows.forEach((row, index) => { if ((row[0] || "").toString().trim() === idToDelete.trim()) subPurchasePrIndices.push(index); });
 
             const requests = [];
             if (subPurchasePrIndices.length > 0) {
@@ -223,7 +210,7 @@ module.exports = (dependencies) => {
 
             if (requests.length > 0) {
                 await sheetsWrite.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
-                sheetCache.delete("Precher_pr_all");
+                sheetCache.delete("precher_pr_all");
                 sheetCache.delete("sub_precher_pr_all");
             }
             res.redirect("/precher_pr");
@@ -236,7 +223,7 @@ module.exports = (dependencies) => {
         const { id } = req.body;
         if (!id) return res.status(400).json({ error: "ต้องระบุ id" });
         try {
-            const sheetName = "Precher_pr";
+            const sheetName = "precher_pr";
             const user = req.session.user;
             const userName = user ? (user['ชื่อภาษาอังกฤษpic'] || 'Unknown') : 'Unknown';
             const dateStr = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -244,7 +231,7 @@ module.exports = (dependencies) => {
             const result = await sheetsWrite.spreadsheets.values.get({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A1:AZ` });
             const allRows = result.data.values ?? [];
             const headers = [...allRows[0]];
-            const idColIndex = headers.indexOf("id");
+            const idColIndex = headers.findIndex(h => h.trim() === 'id');
             let rowIndex = -1;
             for (let i = 1; i < allRows.length; i++) { if ((allRows[i][idColIndex] || "").toString().trim() === id.toString().trim()) { rowIndex = i; break; } }
             if (rowIndex === -1) return res.status(404).json({ error: `ไม่พบข้อมูล ID: ${id}` });

@@ -188,32 +188,14 @@ module.exports = (dependencies) => {
     // --- Sale SO Routes ---
     router.get("/sale_so", async (req, res) => {
         try {
-            const [data, subData] = await Promise.all([
-                getsheet(null, "sales_so"),
-                getsheet(null, "sub_sales_so")
-            ]);
-
-            // Calculate totals from sub_sales_so
-            const totalsMap = {};
-            subData.forEach(row => {
-                const id = String(row['id']).trim();
-                const amount = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
-                if (!isNaN(amount)) {
-                    totalsMap[id] = (totalsMap[id] || 0) + amount;
-                }
-            });
-
+            const data = await getsheet(null, "sales_so");
             const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
 
             let filteredData = data.map(row => {
                 let obj = {};
                 allowedHeaders.forEach((h) => { 
-                    if (h === 'จำนวนเงินรวม') {
-                        obj[h] = (totalsMap[String(row['id']).trim()] || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                    } else if (row[h]) {
-                        obj[h] = row[h];
-                    }
+                    if (row[h]) obj[h] = row[h]; 
                 });
                 return obj;
             }).filter(obj => Object.keys(obj).length > 0);
@@ -405,6 +387,7 @@ module.exports = (dependencies) => {
                 }
             }
 
+            let grandTotal = 0;
             if (finalItems && finalItems.length > 0) {
                 const values = finalItems.map(p => {
                     const qty = parseFloat(p.quantity) || 0;
@@ -412,7 +395,9 @@ module.exports = (dependencies) => {
                     const taxRate = parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0;
                     const amount = qty * price;
                     const tax = amount * (taxRate / 100);
-                    return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, amount + tax];
+                    const total = amount + tax;
+                    grandTotal += total;
+                    return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, total];
                 });
                 await sheetsWrite.spreadsheets.values.append({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A:J`, valueInputOption: "USER_ENTERED", requestBody: { values } });
             }
@@ -436,6 +421,14 @@ module.exports = (dependencies) => {
                         if (orderChanges) { for (let header in orderChanges) { const j = saleHeaders.indexOf(header); if (j !== -1) { while (saleRow.length <= j) saleRow.push(""); saleRow[j] = orderChanges[header]; } } }
                         const dateCol = saleHeaders.indexOf("วันที่แก้ไขล่าสุด"); if (dateCol !== -1) { while (saleRow.length <= dateCol) saleRow.push(""); saleRow[dateCol] = dateStr; }
                         const editorCol = saleHeaders.indexOf("ผู้แก้ไขล่าสุด"); if (editorCol !== -1) { while (saleRow.length <= editorCol) saleRow.push(""); saleRow[editorCol] = userName; }
+                        
+                        // Update grand total
+                        const totalCol = saleHeaders.indexOf("จำนวนเงินรวม");
+                        if (totalCol !== -1) {
+                            while (saleRow.length <= totalCol) saleRow.push("");
+                            saleRow[totalCol] = grandTotal;
+                        }
+
                         await sheetsWrite.spreadsheets.values.update({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${saleSheetName}!A${saleRowIndex + 1}`, valueInputOption: "USER_ENTERED", requestBody: { values: [saleRow] } });
                     }
                 }
