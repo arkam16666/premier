@@ -57,36 +57,81 @@
     min-width: 200px;
     height: 100vh;
     background-color: #130a1c;
-    /* สีพื้นหลังโทนม่วงเข้ม (คุมธีมแต่ไม่แสบตา) */
     color: white;
     position: fixed;
     top: 0;
     left: 0;
-    z-index: 100;
+    z-index: 1000; /* Higher z-index */
     display: flex;
     flex-direction: column;
     padding: 20px;
     box-sizing: border-box;
     flex-shrink: 0;
+    overflow-y: auto; /* Enable scroll for short screens */
 
     animation: slideInLeft 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
+/* Scrollbar styling for sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(167, 134, 255, 0.3);
+    border-radius: 2px;
+}
+
+/* Handle layout on very short screens */
+@media (max-height: 500px) {
+    .sidebar {
+        padding: 10px;
+    }
+    .logo h2 { font-size: 1.2rem; }
+    .sidebar-footer { padding: 10px 0; }
+}
+
+/* Handle layout on small devices (already partially in other files but let's centralize) */
+@media (max-width: 992px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .sidebar.active {
+        transform: translateX(0);
+    }
+}
+
 /* ===== Logo ===== */
 .logo {
+    margin-bottom: 2rem;
     animation: fadeInUp 0.5s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
+.logo h2 {
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #ff7eb3 0%, #a786ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
 /* ===== Menu Links ===== */
+.menu {
+    flex: 1;
+}
+
 .menu a {
     display: flex;
     align-items: center;
-    padding: 12px 15px;
+    padding: 0.8rem 1rem;
     text-decoration: none;
     color: #b0a8ba;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     border-radius: 12px;
     transition: all 0.3s ease;
+    font-size: 0.95rem;
 
     opacity: 0;
     animation: fadeInUp 0.4s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
