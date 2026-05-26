@@ -1,0 +1,101 @@
+/* Extracted from <style> blocks and inline styles */
+.item-qty {
+    width: 70px;
+    padding: 8px 5px;
+    border-radius: 10px;
+    border: 1px solid rgba(167, 134, 255, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.item-qty:focus {
+    border-color: #ff7eb3;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 15px rgba(255, 126, 179, 0.3);
+    transform: scale(1.05);
+}
+
+.item-qty::-webkit-inner-spin-button,
+.item-qty::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.pending-add {
+    background-color: rgba(144, 238, 144, 0.1) !important;
+}
+
+.item-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #ff7eb3;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: 20px 0;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.user-info {
+    color: #a0a0b5;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.main-content {
+    padding: 20px;
+}
+
+.summary-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.stat-card-custom {
+    background: #150c22;
+    border: 1px solid #281a3d;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.stat-icon-custom {
+    width: 48px; height: 48px; border-radius: 10px; background: rgba(255, 126, 179, 0.15); color: #ff7eb3; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+}
+
+.stat-icon-blue {
+    background: rgba(74, 144, 226, 0.15); color: #4a90e2;
+}
+
+.stat-label {
+    color: #a0a0b5; font-size: 0.9rem; margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.4rem; font-weight: 600; color: #fff;
+}
+
+.table-responsive-container {
+    overflow-x: auto; width: 100%;
+}

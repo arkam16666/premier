@@ -60,7 +60,7 @@ module.exports = (dependencies) => {
                 inventory_summary: stock.map(s => ({ รหัส: s['รหัส'], ชื่อ: s['ชื่อ'], จำนวน: s['จำนวน'], หน่วย: s['หน่วย'] })),
                 product_catalog: product.map(p => ({ รหัส: p['รหัส'], ชื่อ: p['ชื่อ'], ราคา: p['ราคาขาย'], แบรนด์: p['แบรนด์'] })),
                 sales_proposals: salesPr.map(s => ({ id: s['id'], วันที่: s['วันที่'], ลูกค้า: s['ลูกค้า-ผู้ขาย'], สถานะ: s['สถานะเอกสาร'] })),
-                team: employees.map(e => ({ ชื่อ: e['ชื่อpic'], รหัส: e['รหัสpic'] }))
+                team: employees.map(({ password, ...rest }) => rest)
             };
 
             let systemPrompt = "";

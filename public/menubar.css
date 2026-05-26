@@ -142,3 +142,21 @@
     border-radius: 0 !important;
     background: transparent !important;
 }
+
+/* Sidebar Footer & User Info */
+.sidebar-footer {
+    margin-top: auto;
+    padding: 20px 0;
+    text-align: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-info {
+    color: #a0a0b5;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.user-info i {
+    margin-right: 5px;
+}

@@ -2,7 +2,7 @@ const express = require('express');
 
 module.exports = (dependencies) => {
     const router = express.Router();
-    const { getsheet, sheetsWrite, sheetCache, process } = dependencies;
+    const { getsheet, sheetsWrite, sheetCache, process, fs, path } = dependencies;
 
     // Helper function for mapping data
     const mapDataByHeaders = (rawData, headers) => {
@@ -66,23 +66,68 @@ module.exports = (dependencies) => {
     });
 
     router.get("/add_sale", (req, res) => {
-        const today = new Date().toISOString().split('T')[0];
-        res.render('add_sale', { today });
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            res.render('add_sale', { 
+                today, 
+                user: req.session.user || res.locals.user 
+            });
+        } catch (err) {
+            console.error("[ERROR] GET /add_sale:", err);
+            res.status(500).send("Internal Server Error: " + err.message);
+        }
     });
 
     router.post('/add_sale', async (req, res) => {
         try {
             const user = req.session.user;
-            const { orderType, วันที่, PIC } = req.body;
+            const { orderType, วันที่ } = req.body;
+            const PIC = user ? (user['ชื่อภาษาอังกฤษpic'] || req.body.PIC) : req.body.PIC;
             const customerDetails = req.body['ลูกค้า-ผู้ขาย'];
 
-            let webhookUrl = process.env.WEBHOOK_TEST_URL;
-            if (orderType === 'sale' && process.env.WEBHOOK_SALES_URL) {
-                webhookUrl = process.env.WEBHOOK_SALES_URL;
+            console.log('[DEBUG] add_sale request body:', JSON.stringify(req.body));
+            
+            let prUrl = process.env.PR_URL;
+            let salesUrl = process.env.WEBHOOK_SALES_URL;
+            let testUrl = process.env.WEBHOOK_TEST_URL;
+
+            // Fallback: Read .env manually if PR_URL is missing (in case server wasn't restarted)
+            if (!prUrl || !salesUrl) {
+                try {
+                    const envContent = fs.readFileSync(path.join(process.cwd(), '.env'), 'utf8');
+                    const lines = envContent.split('\n');
+                    lines.forEach(line => {
+                        const [key, ...valueParts] = line.split('=');
+                        if (key && valueParts.length > 0) {
+                            const value = valueParts.join('=').trim();
+                            if (key.trim() === 'PR_URL' && !prUrl) prUrl = value;
+                            if (key.trim() === 'WEBHOOK_SALES_URL' && !salesUrl) salesUrl = value;
+                            if (key.trim() === 'WEBHOOK_TEST_URL' && !testUrl) testUrl = value;
+                        }
+                    });
+                } catch (e) {
+                    console.error('[ERROR] Failed to read .env fallback:', e.message);
+                }
             }
 
+            console.log('[DEBUG] env WEBHOOK_SALES_URL:', salesUrl);
+            console.log('[DEBUG] env PR_URL:', prUrl);
+
+            let webhookUrl = "";
+            if (orderType === 'sale') {
+                webhookUrl = salesUrl || testUrl;
+            } else if (orderType === 'purchase' || orderType === 'purchase_request') {
+                webhookUrl = prUrl || testUrl;
+            }
+
+            console.log(`[DEBUG] Final Webhook URL: "${webhookUrl}"`);
+
             if (!webhookUrl) {
-                return res.status(500).json({ success: false, error: "ไม่พบ Webhook URL ในระบบ" });
+                return res.status(500).json({ 
+                    success: false, 
+                    error: "ไม่พบ Webhook URL ในระบบ (PR_URL)", 
+                    debug: { orderType, hasPrUrl: !!prUrl, hasSalesUrl: !!salesUrl } 
+                });
             }
 
             const payload = {
@@ -114,9 +159,12 @@ module.exports = (dependencies) => {
         const idToEdit = req.query.id;
         const searchQuery = (req.query.search || "").trim().toLowerCase();
         try {
-            const subSalesData = await getsheet(idToEdit, "sub_sales_pr");
-            const salesData = await getsheet(idToEdit, "Sale_pr");
-            const allProductsRaw = await getsheet(null, "product");
+            const [subSalesData, salesData, allProductsRaw, employees] = await Promise.all([
+                getsheet(idToEdit, "sub_sales_pr"),
+                getsheet(idToEdit, "Sale_pr"),
+                getsheet(null, "product"),
+                getsheet(null, "empolyee")
+            ]);
 
             const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
             const subSaleHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี", "จำนวนเงินรวม"];
@@ -125,6 +173,13 @@ module.exports = (dependencies) => {
             let salePrData = mapDataByHeaders(subSalesData, subSaleHeaders);
             let orderData = mapDataByHeaders(salesData, saleHeaders);
             let allProducts = mapDataByHeaders(allProductsRaw, productHeaders);
+
+            // Find full employee info for the PIC (use trim to handle whitespace/tabs)
+            let picInfo = {};
+            if (orderData.length > 0) {
+                const picName = (orderData[0]['PIC'] || "").toString().trim();
+                picInfo = employees.find(e => (e['ชื่อภาษาอังกฤษpic'] || "").toString().trim() === picName) || {};
+            }
 
             if (searchQuery) {
                 salePrData = salePrData.filter(item =>
@@ -138,6 +193,7 @@ module.exports = (dependencies) => {
                 order: orderData,
                 rawSalesData: salesData,
                 allProducts: allProducts,
+                picInfo: picInfo, // Pass full employee info
                 search: req.query.search || "",
                 idToEdit: idToEdit
             });
@@ -216,11 +272,12 @@ module.exports = (dependencies) => {
         const idToEdit = req.query.id;
         const searchQuery = (req.query.search || "").trim().toLowerCase();
         try {
-            const [subSalesData, salesData, allProductsRaw, stockData] = await Promise.all([
+            const [subSalesData, salesData, allProductsRaw, stockData, employees] = await Promise.all([
                 getsheet(idToEdit, "sub_sales_so"),
                 getsheet(idToEdit, "sales_so"),
                 getsheet(null, "product"),
-                getsheet(null, "stock")
+                getsheet(null, "stock"),
+                getsheet(null, "empolyee")
             ]);
 
             const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
@@ -232,6 +289,13 @@ module.exports = (dependencies) => {
 
             let saleSoData = mapDataByHeaders(subSalesData, subSaleHeaders);
             let orderData = mapDataByHeaders(salesData, saleHeaders);
+
+            // Find full employee info for the PIC (use trim to handle whitespace/tabs)
+            let picInfo = {};
+            if (orderData.length > 0) {
+                const picName = (orderData[0]['PIC'] || "").toString().trim();
+                picInfo = employees.find(e => (e['ชื่อภาษาอังกฤษpic'] || "").toString().trim() === picName) || {};
+            }
             
             let allProducts = allProductsRaw.map(row => {
                 const obj = {};
@@ -252,6 +316,7 @@ module.exports = (dependencies) => {
                 order: orderData,
                 rawSalesData: salesData,
                 allProducts: allProducts,
+                picInfo: picInfo, // Pass full employee info
                 search: req.query.search || "",
                 idToEdit: idToEdit
             });

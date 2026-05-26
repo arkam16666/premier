@@ -200,3 +200,75 @@ main {
         left: 0;
     }
 }
+
+/* Extracted from inventory.ejs */
+main {
+    padding: 20px;
+}
+
+.edit-form-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 20px 24px;
+}
+
+.edit-form-group {
+    margin-bottom: 5px;
+}
+
+.edit-form-group.full-width {
+    grid-column: span 2;
+}
+
+.edit-form-group label {
+    display: block;
+    color: #ff7eb3;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.edit-form-input {
+    width: 100%;
+    padding: 10px;
+    background: #25163d;
+    border: 1px solid #2a1b3d;
+    border-radius: 8px;
+    color: #fff;
+    outline: none;
+    box-sizing: border-box;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.9rem;
+}
+
+.edit-form-input:focus {
+    border-color: #ff7eb3;
+    box-shadow: 0 0 5px rgba(255, 126, 179, 0.3);
+}
+
+.section-title {
+    grid-column: span 2;
+    color: #a786ff;
+    font-size: 1rem;
+    font-weight: 600;
+    border-bottom: 1px solid #2a1b3d;
+    padding-bottom: 5px;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: 20px 0;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.user-info {
+    color: #a0a0b5;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}

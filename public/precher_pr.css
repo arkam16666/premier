@@ -293,6 +293,63 @@ td[colspan="100%"] {
     box-shadow: 0 4px 15px rgba(255, 126, 179, 0.3);
 }
 
+/* Summary Cards & Stat Cards */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+    animation: fadeInUp 0.5s 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.stat-card {
+    background: #150c22;
+    border: 1px solid #281a3d;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-card:nth-child(1) .stat-icon {
+    background: rgba(255, 126, 179, 0.15);
+    color: #ff7eb3;
+}
+
+.stat-card:nth-child(2) .stat-icon {
+    background: rgba(74, 144, 226, 0.15);
+    color: #4a90e2;
+}
+
+.stat-label {
+    color: #a0a0b5;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #fff;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }

@@ -1,0 +1,44 @@
+/* Extracted from inline styles */
+.sidebar-footer {
+    margin-top: auto;
+    padding: 20px 0;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.user-info {
+    color: #a0a0b5;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.welcome-header {
+    margin-bottom: 40px;
+}
+
+.welcome-title {
+    font-size: 2.2rem;
+    color: #fff;
+}
+
+.welcome-subtitle {
+    color: #a0a0b5;
+    margin-top: 5px;
+}
+
+.dashboard-grid-row {
+    margin-bottom: 25px;
+    grid-template-columns: 1.5fr 1fr;
+}
+
+.chart-container {
+    height: 300px;
+    position: relative;
+}
+
+.chart-container-centered {
+    height: 300px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
