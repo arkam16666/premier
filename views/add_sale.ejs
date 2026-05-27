@@ -143,9 +143,18 @@
             const result = await response.json();
 
             if (response.ok && result.success) {
+                let webhookMsg = result.webhookResponse?.message || result.webhookResponse?.msg || 'รายการถูกสร้างเรียบร้อยแล้ว';
+                const webhookTitle = result.webhookResponse?.title || 'สร้างรายการสำเร็จ';
+                const returnedId = result.webhookResponse?.id || result.webhookResponse?.ID;
+
+                if (returnedId) {
+                    webhookMsg += `\nID: ${returnedId}`;
+                }
+
                 Swal.fire({
                     icon: 'success',
-                    title: 'สร้างรายการสำเร็จ',
+                    title: webhookTitle,
+                    text: webhookMsg,
                     background: '#1d112e',
                     color: '#fff',
                     confirmButtonColor: '#ff7eb3'

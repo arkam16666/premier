@@ -215,10 +215,18 @@
         const result = await response.json();
 
         if (response.ok && result.success) {
+          let webhookMsg = result.webhookResponse?.message || result.webhookResponse?.msg || 'ระบบได้ทำการส่งข้อมูลและปรับปรุงสถานะเรียบร้อยแล้ว';
+          const webhookTitle = result.webhookResponse?.title || 'ส่งข้อมูลสำเร็จ';
+          const returnedId = result.webhookResponse?.id || result.webhookResponse?.ID;
+
+          if (returnedId) {
+            webhookMsg += `\nID: ${returnedId}`;
+          }
+
           Swal.fire({
             icon: 'success',
-            title: 'ส่งข้อมูลสำเร็จ',
-            text: 'ระบบได้ทำการส่งข้อมูลและปรับปรุงสถานะเรียบร้อยแล้ว',
+            title: webhookTitle,
+            text: webhookMsg,
             background: '#1d112e',
             color: '#fff',
             confirmButtonColor: '#ff7eb3'

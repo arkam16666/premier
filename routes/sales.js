@@ -87,12 +87,12 @@ module.exports = (dependencies) => {
 
             console.log('[DEBUG] add_sale request body:', JSON.stringify(req.body));
             
-            let prUrl = process.env.PR_URL;
             let salesUrl = process.env.WEBHOOK_SALES_URL;
+            let prUrl = process.env.PR_URL;
             let testUrl = process.env.WEBHOOK_TEST_URL;
 
-            // Fallback: Read .env manually if PR_URL is missing (in case server wasn't restarted)
-            if (!prUrl || !salesUrl) {
+            // Fallback: Read .env manually if URLs are missing (in case server wasn't restarted)
+            if (!salesUrl || !prUrl) {
                 try {
                     const envContent = fs.readFileSync(path.join(process.cwd(), '.env'), 'utf8');
                     const lines = envContent.split('\n');
@@ -100,8 +100,8 @@ module.exports = (dependencies) => {
                         const [key, ...valueParts] = line.split('=');
                         if (key && valueParts.length > 0) {
                             const value = valueParts.join('=').trim();
-                            if (key.trim() === 'PR_URL' && !prUrl) prUrl = value;
                             if (key.trim() === 'WEBHOOK_SALES_URL' && !salesUrl) salesUrl = value;
+                            if (key.trim() === 'PR_URL' && !prUrl) prUrl = value;
                             if (key.trim() === 'WEBHOOK_TEST_URL' && !testUrl) testUrl = value;
                         }
                     });
@@ -110,23 +110,20 @@ module.exports = (dependencies) => {
                 }
             }
 
-            console.log('[DEBUG] env WEBHOOK_SALES_URL:', salesUrl);
-            console.log('[DEBUG] env PR_URL:', prUrl);
-
             let webhookUrl = "";
             if (orderType === 'sale') {
                 webhookUrl = salesUrl || testUrl;
-            } else if (orderType === 'purchase' || orderType === 'purchase_request') {
+                console.log(`[DEBUG] Selected Sales Webhook: ${webhookUrl}`);
+            } else if (orderType === 'purchase') {
                 webhookUrl = prUrl || testUrl;
+                console.log(`[DEBUG] Selected Purchase Webhook: ${webhookUrl}`);
             }
-
-            console.log(`[DEBUG] Final Webhook URL: "${webhookUrl}"`);
 
             if (!webhookUrl) {
                 return res.status(500).json({ 
                     success: false, 
-                    error: "ไม่พบ Webhook URL ในระบบ (PR_URL)", 
-                    debug: { orderType, hasPrUrl: !!prUrl, hasSalesUrl: !!salesUrl } 
+                    error: "ไม่พบ Webhook URL สำหรับประเภทรายการนี้ในระบบ", 
+                    debug: { orderType, hasSalesUrl: !!salesUrl, hasPrUrl: !!prUrl } 
                 });
             }
 
@@ -144,11 +141,31 @@ module.exports = (dependencies) => {
             Object.keys(payload).forEach(key => urlWithParams.searchParams.append(key, payload[key]));
 
             const response = await fetch(urlWithParams.toString(), { method: 'GET' });
+            
+            let webhookResponseData = null;
+            try {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    webhookResponseData = await response.json();
+                } else {
+                    webhookResponseData = { message: await response.text() };
+                }
+            } catch (e) {
+                console.warn("[WARN] Could not parse webhook response:", e.message);
+            }
+
             if (response.ok) {
-                return res.json({ success: true });
+                return res.json({ 
+                    success: true, 
+                    webhookResponse: webhookResponseData 
+                });
             } else {
-                const errorText = await response.text();
-                return res.status(500).json({ success: false, error: `Webhook Error: ${errorText}` });
+                const errorMsg = webhookResponseData?.message || webhookResponseData?.error || webhookResponseData?.msg || `Webhook Error: ${response.status}`;
+                return res.status(500).json({ 
+                    success: false, 
+                    error: errorMsg, 
+                    webhookResponse: webhookResponseData 
+                });
             }
         } catch (err) {
             res.status(500).json({ success: false, error: err.message });
@@ -533,15 +550,39 @@ module.exports = (dependencies) => {
             sheetCache.delete(`${sheetName}_all`);
             
             let webhookUrl = process.env.WEBHOOK_CONFIRM_SALE_URL || process.env.WEBHOOK_SALES_URL || process.env.WEBHOOK_TEST_URL;
+            let webhookResponseData = null;
             if (webhookUrl) {
                 const urlWithParams = new URL(webhookUrl);
                 urlWithParams.searchParams.append('id', id);
                 urlWithParams.searchParams.append('name', userName);
                 urlWithParams.searchParams.append('picId', user ? (user['รหัสpic'] || '') : '');
                 const webhookResponse = await fetch(urlWithParams.toString(), { method: 'GET' });
-                if (!webhookResponse.ok) return res.status(500).json({ success: false, error: "Webhook Error" });
+                
+                try {
+                    const contentType = webhookResponse.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        webhookResponseData = await webhookResponse.json();
+                    } else {
+                        webhookResponseData = { message: await webhookResponse.text() };
+                    }
+                } catch (e) {
+                    console.warn("[WARN] Could not parse webhook response:", e.message);
+                }
+
+                if (!webhookResponse.ok) {
+                    return res.status(500).json({ 
+                        success: false, 
+                        error: "Webhook Error", 
+                        webhookResponse: webhookResponseData 
+                    });
+                }
             }
-            res.json({ success: true, sheetUpdated: true, webhookSuccess: true });
+            res.json({ 
+                success: true, 
+                sheetUpdated: true, 
+                webhookSuccess: true, 
+                webhookResponse: webhookResponseData 
+            });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }

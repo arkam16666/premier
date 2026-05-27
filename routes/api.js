@@ -4,6 +4,9 @@ module.exports = (dependencies) => {
     const router = express.Router();
     const { sheets, process } = dependencies;
 
+    // ดึง URL ของ Python API จาก .env หรือใช้ default เป็น localhost:4000
+    const PYTHON_API_BASE = process.env.PYTHON_API_BASE || 'http://localhost:4000';
+
     router.get("/api/sheets", async (req, res) => {
         try {
             const result = await sheets.spreadsheets.values.get({
@@ -20,28 +23,100 @@ module.exports = (dependencies) => {
         }
     });
 
+    // 1. ส่งข้อมูลไปให้ Python Generate PDF และรับไฟล์ PDF กลับมาตรงๆ (Direct Stream)
     router.post('/api/generate-pdf', async (req, res) => {
         try {
-            const pdfApiUrl = process.env.PDF_API_URL || 'https://pdf.thanadon.click/api/generate-pdf';
-            const response = await fetch(pdfApiUrl, {
+            console.log("[DEBUG] Sending data to Python PDF Service...");
+            const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(req.body)
             });
-            if (!response.ok) throw new Error(`External API returned status: ${response.status}`);
             
+            if (!response.ok) {
+                const errResult = await response.json().catch(() => ({ error: "Unknown error" }));
+                console.error("[ERROR] Python service error:", errResult);
+                return res.status(response.status).json(errResult);
+            }
+
             const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                const data = await response.json();
-                return res.json(data);
-            } else {
+            
+            // ถ้า Python ส่ง PDF กลับมาให้ส่งต่อทันที
+            if (contentType && contentType.includes('application/pdf')) {
                 const arrayBuffer = await response.arrayBuffer();
                 const buffer = Buffer.from(arrayBuffer);
-                res.setHeader('Content-Type', contentType || 'application/pdf');
+                res.setHeader('Content-Type', 'application/pdf');
+                // ดึงชื่อไฟล์จาก header ถ้ามี หรือตั้งเอง
+                res.setHeader('Content-Disposition', response.headers.get('content-disposition') || 'attachment; filename=report.pdf');
                 return res.send(buffer);
+            } else {
+                // ถ้าไม่ใช่ PDF (เช่น error เป็น JSON)
+                const result = await response.json();
+                res.status(response.status).json(result);
             }
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error("[ERROR] generate-pdf proxy:", error.message);
+            res.status(500).json({ error: "ไม่สามารถเชื่อมต่อกับ Python PDF Service ได้" });
+        }
+    });
+
+    // 2. Route สำหรับดึง PDF จาก Python มาแสดงผล (Proxy View)
+    router.get('/api/view-pdf/:filename', async (req, res) => {
+        try {
+            const filename = req.params.filename;
+            const targetUrl = `${PYTHON_API_BASE}/api/view-pdf/${encodeURIComponent(filename)}`;
+            
+            console.log(`[DEBUG] Fetching PDF from Python: ${targetUrl}`);
+            const response = await fetch(targetUrl);
+            
+            if (!response.ok) {
+                console.error(`[ERROR] Python service returned ${response.status}`);
+                return res.status(response.status).json({ error: "ไม่พบไฟล์ PDF หรือ Python API ทำงานผิดพลาด" });
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            // ตรวจสอบ Signature ของไฟล์ PDF (%PDF)
+            if (buffer.length > 4 && buffer.toString('utf8', 0, 4) !== '%PDF') {
+                console.error("[ERROR] Received invalid PDF data. First 100 bytes:", buffer.toString('utf8', 0, 100));
+                
+                // ถ้าข้อมูลที่ได้รับเป็น HTML (เช่น หน้า Login) ให้แจ้งเตือน
+                if (buffer.toString().includes('<!DOCTYPE html>') || buffer.toString().includes('<html')) {
+                    return res.status(500).json({ error: "เซสชันหมดอายุหรือถูกเปลี่ยนเส้นทางไปยังหน้าเข้าสู่ระบบ" });
+                }
+                
+                return res.status(500).json({ error: "ไฟล์ที่ได้รับจากเครื่องมือสร้าง PDF ไม่สมบูรณ์" });
+            }
+
+            // ตั้งค่า Header เพื่อให้เบราว์เซอร์แสดงผลเป็น PDF
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Length', buffer.length);
+            res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+            
+            console.log(`[DEBUG] Successfully serving PDF: ${filename} (${buffer.length} bytes)`);
+            res.send(buffer);
+        } catch (error) {
+            console.error("[ERROR] view-pdf proxy failure:", error.message);
+            res.status(500).json({ error: "เกิดข้อผิดพลาดในการดึงไฟล์: " + error.message });
+        }
+    });
+
+    // 3. ส่งข้อมูลไปให้ Python สร้างลิงก์ PDF ถาวร
+    router.post('/api/generate-pdf-link', async (req, res) => {
+        try {
+            console.log("[DEBUG] Requesting PDF Link from Python...");
+            const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf-link`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(req.body)
+            });
+            
+            const result = await response.json();
+            res.status(response.status).json(result);
+        } catch (error) {
+            console.error("[ERROR] generate-pdf-link proxy:", error.message);
+            res.status(500).json({ error: "ไม่สามารถเชื่อมต่อกับ Python PDF Service เพื่อสร้างลิงก์ได้" });
         }
     });
 

@@ -247,15 +247,40 @@ module.exports = (dependencies) => {
             sheetCache.delete(`${sheetName}_all`);
             
             let webhookUrl = process.env.WEBHOOK_CONFIRM_PURCHASE_URL || process.env.WEBHOOK_TEST_URL;
+            let webhookResponseData = null;
             if (webhookUrl) {
                 const urlWithParams = new URL(webhookUrl);
                 urlWithParams.searchParams.append('id', id);
                 urlWithParams.searchParams.append('name', userName);
                 urlWithParams.searchParams.append('picId', user ? (user['รหัสpic'] || '') : '');
                 const webhookResponse = await fetch(urlWithParams.toString(), { method: 'GET' });
-                if (!webhookResponse.ok) return res.status(500).json({ success: false, error: "Webhook Error" });
+                
+                try {
+                    const contentType = webhookResponse.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        webhookResponseData = await webhookResponse.json();
+                    } else {
+                        webhookResponseData = { message: await webhookResponse.text() };
+                    }
+                } catch (e) {
+                    console.warn("[WARN] Could not parse webhook response:", e.message);
+                }
+
+                if (!webhookResponse.ok) {
+                    const errorMsg = webhookResponseData?.message || webhookResponseData?.error || webhookResponseData?.msg || `Webhook Error: ${webhookResponse.status}`;
+                    return res.status(500).json({ 
+                        success: false, 
+                        error: errorMsg, 
+                        webhookResponse: webhookResponseData 
+                    });
+                }
             }
-            res.json({ success: true, sheetUpdated: true, webhookSuccess: true });
+            res.json({ 
+                success: true, 
+                sheetUpdated: true, 
+                webhookSuccess: true, 
+                webhookResponse: webhookResponseData 
+            });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }
