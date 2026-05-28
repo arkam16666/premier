@@ -55,21 +55,6 @@
                     <!-- Summary Cards -->
                     <div class="summary-cards summary-cards-container">
                         <div class="stat-card stat-card-custom">
-                          <div class="stat-icon stat-icon-custom">
-                            <i class="fas fa-coins"></i>
-                          </div>
-                          <div>
-                            <div class="stat-label">จำนวนเงินรวมทั้งหมด</div>
-                            <div id="summaryGrandTotal" class="stat-value">
-                              <% 
-                                const dbTotal = (order && order.length > 0) ? parseFloat(String(order[0]['จำนวนเงินรวม'] || 0).replace(/,/g, '')) : 0;
-                              %>
-                              ฿<%= dbTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                            </div>
-                          </div>
-                        </div>
-                  
-                        <div class="stat-card stat-card-custom">
                           <div class="stat-icon stat-icon-custom stat-icon-blue">
                             <i class="fas fa-file-invoice"></i>
                           </div>
@@ -154,7 +139,6 @@
                                     <th class="text-right">ราคาต่อหน่วย</th>
                                     <th class="text-right">จำนวนเงิน</th>
                                     <th class="text-right">ภาษี</th>
-                                    <th class="text-right">จำนวนเงินรวม</th>
                                 </tr>
                             </thead>
                             <tbody id="purchasePrBody">
@@ -174,7 +158,6 @@
                                             <td class="text-right"><%= row['ราคาต่อหน่วย'] %></td>
                                             <td class="text-right"><%= row['จำนวนเงิน'] %></td>
                                             <td class="text-right"><%= row['ภาษี'] %></td>
-                                            <td class="item-total text-right"><%= row['จำนวนเงินรวม'] %></td>
                                         </tr>
                                     <% }) } else { %>
                                         <tr>

@@ -20,7 +20,7 @@ module.exports = (dependencies) => {
     router.get("/sale_pr", async (req, res) => {
         try {
             const data = await getsheet(null, "Sale_pr");
-            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
+            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
             const statusFilter = (req.query.status || "ทั้งหมด");
 
@@ -134,7 +134,8 @@ module.exports = (dependencies) => {
                 picName: PIC,
                 picId: user ? (user['รหัสpic'] || '') : '',
                 customerDetails: customerDetails,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                replyToken: 'false'
             };
             
             const urlWithParams = new URL(webhookUrl);
@@ -184,7 +185,7 @@ module.exports = (dependencies) => {
             ]);
 
             const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
-            const subSaleHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี", "จำนวนเงินรวม"];
+            const subSaleHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี"];
             const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาขาย", "แบรนด์", "อัตราภาษีขาย"];
 
             let salePrData = mapDataByHeaders(subSalesData, subSaleHeaders);
@@ -262,13 +263,14 @@ module.exports = (dependencies) => {
     router.get("/sale_so", async (req, res) => {
         try {
             const data = await getsheet(null, "sales_so");
-            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
+            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
 
             let filteredData = data.map(row => {
                 let obj = {};
                 allowedHeaders.forEach((h) => { 
-                    if (row[h]) obj[h] = row[h]; 
+                    const rawVal = (row[h] || "").toString().trim();
+                    obj[h] = rawVal;
                 });
                 return obj;
             }).filter(obj => Object.keys(obj).length > 0);
@@ -279,7 +281,11 @@ module.exports = (dependencies) => {
                 );
             }
 
-            res.render("sale_so", { data: filteredData, search: req.query.search || "" });
+            res.render("sale_so", { 
+                data: filteredData, 
+                search: req.query.search || "",
+                currentStatus: "ทั้งหมด"
+            });
         } catch (err) {
             res.status(500).send(err.message);
         }
@@ -297,8 +303,8 @@ module.exports = (dependencies) => {
                 getsheet(null, "empolyee")
             ]);
 
-            const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
-            const subSaleHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี", "จำนวนเงินรวม"];
+            const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์"];
+            const subSaleHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี"];
             const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาขาย", "แบรนด์", "อัตราภาษีขาย"];
 
             const stockMap = {};
@@ -556,6 +562,7 @@ module.exports = (dependencies) => {
                 urlWithParams.searchParams.append('id', id);
                 urlWithParams.searchParams.append('name', userName);
                 urlWithParams.searchParams.append('picId', user ? (user['รหัสpic'] || '') : '');
+                urlWithParams.searchParams.append('replyToken', 'false');
                 const webhookResponse = await fetch(urlWithParams.toString(), { method: 'GET' });
                 
                 try {

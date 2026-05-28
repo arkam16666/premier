@@ -240,31 +240,29 @@ td[colspan="100%"] {
 /* ===== Status Tabs ===== */
 .status-tabs {
     display: flex;
-    gap: 12px;
-    margin-bottom: 30px;
-    padding: 8px;
+    gap: 8px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 4px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 50px;
     width: fit-content;
-    min-width: 450px;
     backdrop-filter: blur(10px);
     animation: fadeInUp 0.5s 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .status-tab {
-    flex: 1;
-    justify-content: center;
-    padding: 10px 25px;
+    padding: 6px 18px;
     border-radius: 40px;
     text-decoration: none;
     color: rgba(255, 255, 255, 0.5);
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     font-weight: 500;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .status-tab:hover {

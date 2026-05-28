@@ -8,7 +8,7 @@ module.exports = (dependencies) => {
     router.get("/precher_pr", async (req, res) => {
         try {
             const data = await getsheet(null, "precher_pr");
-            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
+            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
             const statusFilter = (req.query.status || "ทั้งหมด");
 
@@ -60,8 +60,8 @@ module.exports = (dependencies) => {
             const purchaseData = await getsheet(idToEdit, "precher_pr");
             const allProductsRaw = await getsheet(null, "product");
 
-            const purchaseHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "จำนวนเงินรวม", "สถานะเอกสาร"];
-            const subPurchaseHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี", "จำนวนเงินรวม"];
+            const purchaseHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
+            const subPurchaseHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี"];
             const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาซื้อ", "แบรนด์", "อัตราภาษีซื้อ"];
 
             const mapDataByHeaders = (rawData, headers) => {
@@ -246,13 +246,14 @@ module.exports = (dependencies) => {
             
             sheetCache.delete(`${sheetName}_all`);
             
-            let webhookUrl = process.env.WEBHOOK_CONFIRM_PURCHASE_URL || process.env.WEBHOOK_TEST_URL;
+            let webhookUrl = process.env.CONFIRM_PR_URL;
             let webhookResponseData = null;
             if (webhookUrl) {
                 const urlWithParams = new URL(webhookUrl);
                 urlWithParams.searchParams.append('id', id);
                 urlWithParams.searchParams.append('name', userName);
                 urlWithParams.searchParams.append('picId', user ? (user['รหัสpic'] || '') : '');
+                urlWithParams.searchParams.append('replyToken', 'false');
                 const webhookResponse = await fetch(urlWithParams.toString(), { method: 'GET' });
                 
                 try {

@@ -248,6 +248,7 @@ td[colspan="100%"] {
 
 .stat-card {
     background: #150c22;
+    margin-top: 20px;
     border: 1px solid #281a3d;
     border-radius: 12px;
     padding: 20px;

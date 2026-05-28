@@ -53,27 +53,6 @@
     <div class="summary-cards">
       <div class="stat-card">
         <div class="stat-icon">
-          <i class="fas fa-coins"></i>
-        </div>
-        <div>
-          <div class="stat-label">ยอดเงินรวมทั้งหมด (ที่แสดง)</div>
-          <div class="stat-value">
-            <% 
-              let totalSum = 0;
-              if (data && data.length > 0) {
-                data.forEach(row => {
-                  const val = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
-                  if (!isNaN(val)) totalSum += val;
-                });
-              }
-            %>
-            ฿<%= totalSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-          </div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">
           <i class="fas fa-file-invoice"></i>
         </div>
         <div>
@@ -86,7 +65,7 @@
     </div>
 
     <form action="/sale_so" method="GET" class="search-container">
-      <input type="text" name="search" class="search-input" value="<%= search %>" placeholder="ค้นหาด้วย ID ใน Sale SO">
+      <input type="text" name="search" class="search-input" value="<%= search %>" placeholder="ค้นหาด้วย ID หรือข้อมูลใน Sale SO">
 
       <button type="submit" class="btn-search">
         <i class="fas fa-search"></i> ค้นหา
@@ -119,13 +98,7 @@
               <tr>
                 <% Object.entries(row).forEach(([key, val])=> { %>
                   <td>
-                    <% if (key === 'สถานะเอกสาร') { %>
-                      <span class="status-badge <%= val === 'สำเร็จ' || val === 'ยืนยันแล้ว' ? 'status-success' : 'status-pending' %>">
-                        <%= val === 'สำเร็จ' ? 'ยืนยันแล้ว' : (val || 'รอดำเนินการ') %>
-                      </span>
-                    <% } else { %>
-                      <%= val %>
-                    <% } %>
+                    <%= val %>
                   </td>
                   <% }) %>
 
