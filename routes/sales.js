@@ -127,15 +127,23 @@ module.exports = (dependencies) => {
                 });
             }
 
+            const employeesRaw = await getsheet(null, "empolyee");
+            const senderName = user ? (user['ชื่อภาษาอังกฤษpic'] || '') : '';
+            const senderData = employeesRaw.find(e => (e['ชื่อภาษาอังกฤษpic'] || '').toString().trim() === senderName.trim()) || {};
+            const { password, linetoken, token, ...senderInfo } = senderData;
+
             const payload = {
                 action: 'create_order',
                 orderType: orderType,
                 date: วันที่,
                 picName: PIC,
-                picId: user ? (user['รหัสpic'] || '') : '',
+                picNameThai: (senderInfo['ชื่อpic'] || '').toString().trim(),
+                picDepartment: (senderInfo['แผนก'] || '').toString().trim(),
+                picId: (user ? (user['รหัสpic'] || '') : '').toString().trim(),
                 customerDetails: customerDetails,
                 timestamp: new Date().toISOString(),
-                replyToken: 'false'
+                replyToken: 'false',
+                senderInfo: JSON.stringify(senderInfo)
             };
             
             const urlWithParams = new URL(webhookUrl);
@@ -558,11 +566,20 @@ module.exports = (dependencies) => {
             let webhookUrl = process.env.WEBHOOK_CONFIRM_SALE_URL || process.env.WEBHOOK_SALES_URL || process.env.WEBHOOK_TEST_URL;
             let webhookResponseData = null;
             if (webhookUrl) {
+                const employeesRaw = await getsheet(null, "empolyee");
+                
+                // Find current sender's info
+                const senderData = employeesRaw.find(e => (e['ชื่อภาษาอังกฤษpic'] || '').toString().trim() === userName.trim()) || {};
+                
+                // Exclude sensitive fields
+                const { password, linetoken, token, ...senderInfo } = senderData;
+
                 const urlWithParams = new URL(webhookUrl);
                 urlWithParams.searchParams.append('id', id);
                 urlWithParams.searchParams.append('name', userName);
                 urlWithParams.searchParams.append('picId', user ? (user['รหัสpic'] || '') : '');
                 urlWithParams.searchParams.append('replyToken', 'false');
+                urlWithParams.searchParams.append('senderInfo', JSON.stringify(senderInfo));
                 const webhookResponse = await fetch(urlWithParams.toString(), { method: 'GET' });
                 
                 try {
