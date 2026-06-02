@@ -8,7 +8,7 @@ module.exports = (dependencies) => {
     router.get("/precher_pr", async (req, res) => {
         try {
             const data = await getsheet(null, "precher_pr");
-            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
+            const allowedHeaders = ["id", "วันที่", "ลูกค้า-ผู้ขาย", "จำนวนเงินรวม", "PIC", "สถานะเอกสาร"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
             const statusFilter = (req.query.status || "ทั้งหมด");
 
@@ -60,7 +60,7 @@ module.exports = (dependencies) => {
             const purchaseData = await getsheet(idToEdit, "precher_pr");
             const allProductsRaw = await getsheet(null, "product");
 
-            const purchaseHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
+            const purchaseHeaders = ["id", "วันที่", "เลขที่", "PIC", "ลูกค้า-ผู้ขาย", "ผู้ติดต่อ", "โทรศัพท์", "เบอร์ติดต่อเพิ่มเติม", "กำหนดการยืนราคา", "เครดิต (วัน)", "Email", "ผู้ขอซื้อ", "ประเภทธุรกรรม", "ในประเทศ", "วันที่ส่งมอบ", "วันนัดชำระ", "สถานะเอกสาร"];
             const subPurchaseHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี"];
             const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาซื้อ", "แบรนด์", "อัตราภาษีซื้อ"];
 

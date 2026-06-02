@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>กำลังตรวจสอบสิทธิ์ | ระบบ ERP</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/login.css">
+    <style>
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: #e94560;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            color: #a0a0b5;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .success-icon {
+            font-size: 3rem;
+            color: #4ade80;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .btn-retry {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #e94560;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+
+        .btn-retry:hover {
+            background-color: #ff5c77;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+        <div class="login-logo">
+            <i class="fas fa-cube"></i> ERP System
+        </div>
+
+        <% if (status === 'error') { %>
+            <div class="error-message" style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px;">
+                <i class="fas fa-times-circle" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                <div style="font-size: 1.2rem; font-weight: 500;"><%= message %></div>
+                <p style="color: #a0a0b5; font-size: 0.9rem; margin-top: 10px;">กรุณาเข้าสู่ระบบใหม่อีกครั้งเพื่อดำเนินการต่อ</p>
+                <a href="/logout" class="btn-retry">ไปหน้าล็อกอิน</a>
+            </div>
+        <% } else { %>
+            <div id="loading-state">
+                <span class="loader"></span>
+                <div class="status-text">กำลังตรวจสอบสิทธิ์การใช้งาน...</div>
+                <div class="login-subtitle">กรุณารอสักครู่ ระบบกำลังพาคุณไปยังหน้าจัดการข้อมูล</div>
+            </div>
+
+            <div id="success-state" style="display: none;">
+                <i class="fas fa-check-circle success-icon" style="display: block;"></i>
+                <div class="status-text" style="color: #4ade80; font-weight: 500;">ตรวจสอบสิทธิ์สำเร็จ!</div>
+                <div class="login-subtitle">กำลังนำคุณเข้าสู่ระบบ...</div>
+            </div>
+
+            <script>
+                // จำลองการโหลดให้ดู "Cool" และมั่นคง
+                setTimeout(() => {
+                    document.getElementById('loading-state').style.display = 'none';
+                    document.getElementById('success-state').style.display = 'block';
+                    
+                    // Redirect หลังจากโชว์เครื่องหมายถูกแป๊บนึง
+                    setTimeout(() => {
+                        window.location.href = "<%= targetUrl %>";
+                    }, 800);
+                }, 1500);
+            </script>
+        <% } %>
+    </div>
+
+</body>
+
+</html>

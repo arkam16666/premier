@@ -71,21 +71,24 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <% if (order && order.length> 0) { %>
-                                        <% Object.keys(order[0]).forEach(h=> { %>
+                                    <% if (order && order.length> 0) { 
+                                        const visibleCols = ["id", "วันที่", "ลูกค้า-ผู้ขาย", "PIC", "สถานะเอกสาร"];
+                                        visibleCols.forEach(h => { %>
                                             <th>
                                                 <%= h %>
                                             </th>
-                                            <% }) %>
-                                                <th class="text-center">จัดการ</th>
-                                                <% } %>
+                                        <% }) %>
+                                        <th class="text-center">จัดการ</th>
+                                    <% } %>
                                 </tr>
                             </thead>
                             <tbody class="order">
-                                <% if (order && order.length> 0) { %>
-                                    <% order.forEach(row=> { %>
+                                <% if (order && order.length> 0) { 
+                                    const visibleCols = ["id", "วันที่", "ลูกค้า-ผู้ขาย", "PIC", "สถานะเอกสาร"];
+                                    order.forEach(row => { %>
                                         <tr>
-                                            <% Object.entries(row).forEach(([key, val])=> { %>
+                                            <% visibleCols.forEach(key => { 
+                                                const val = row[key]; %>
                                                 <td>
                                                     <% if (key === 'สถานะเอกสาร') { %>
                                                         <span class="status-badge <%= val === 'สำเร็จ' || val === 'ยืนยันแล้ว' ? 'status-success' : 'status-pending' %>">
@@ -95,14 +98,14 @@
                                                         <%= val %>
                                                     <% } %>
                                                 </td>
-                                                <% }) %>
-                                                    <td class="text-center">
-                                                        <a href="#" onclick="openOrderModal(event)">
-                                                            <i class="fas fa-pencil"> </i>
-                                                        </a>
-                                                    </td>
+                                            <% }) %>
+                                            <td class="text-center">
+                                                <a href="#" onclick="openOrderModal(event)">
+                                                    <i class="fas fa-pencil"> </i>
+                                                </a>
+                                            </td>
                                         </tr>
-                                        <% }) } else { %>
+                                    <% }) } else { %>
                                             <tr>
                                                 <td colspan="100%" class="text-center">ไม่มีข้อมูล</td>
                                             </tr>
@@ -341,33 +344,35 @@
         async function printPDF() {
             const rows = document.querySelectorAll('#purchasePrBody .item-row');
             
-            // สร้าง Object สำหรับเก็บข้อมูลสินค้าโดยมี SKU เป็น Key
-            const itemsObject = {};
+            // สร้าง Array สำหรับเก็บรายการสินค้าในรูปแบบ {"item1": {...}, "item2": {...}}
+            const itemsArray = [];
+            let itemCount = 0;
 
             rows.forEach(row => {
                 if (row.style.display !== 'none') {
                     const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
                     if (qty > 0) {
+                        itemCount++;
                         const sku = row.cells[1].innerText.trim();
+                        const productName = row.cells[2].innerText.trim();
+                        const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
                         const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
                         const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                        itemsObject[sku] = {
+                        
+                        const itemObj = {};
+                        itemObj[`item${itemCount}`] = {
                             'sku': sku,
-                            'productName': row.cells[2].innerText,
-                            'info': row.cells[3].innerText,
-                            'qty': qty,
-                            'unit': row.cells[5].innerText,
-                            'unitPrice': parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0,
-                            'amount': amount,
-                            'vat': vat,
-                            'total': amount + vat
+                            'productName': productName,
+                            'qty': qty.toString(),
+                            'unitPrice': unitPrice.toFixed(2),
+                            'total': (amount + vat).toFixed(2)
                         };
+                        itemsArray.push(itemObj);
                     }
                 }
             });
 
-            const skuKeys = Object.keys(itemsObject);
-            if (skuKeys.length === 0) {
+            if (itemsArray.length === 0) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'ไม่มีรายการสินค้า',
@@ -378,33 +383,78 @@
                 return;
             }
 
-            // คำนวณยอดรวมจาก Object
+            // คำนวณยอดรวม
             let totalVat = 0;
             let grandTotal = 0;
-            for (const key in itemsObject) {
-                totalVat += (itemsObject[key].vat || 0);
-                grandTotal += (itemsObject[key].total || 0);
-            }
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                    if (qty > 0) {
+                        const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
+                        const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                        totalVat += vat;
+                        grandTotal += (amount + vat);
+                    }
+                }
+            });
 
             const headerData = rawPurchaseData.length > 0 ? rawPurchaseData[0] : {};
+            const vendorName = headerData['ลูกค้า-ผู้ขาย'] || '';
+            const preparedByName = '<%= user ? user['ชื่อpic'] : "Unknown" %>';
+
+            // Show loading
+            Swal.fire({
+                title: 'กำลังเตรียมข้อมูล...',
+                text: 'กำลังดึงที่อยู่คู่ค้า',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                background: '#1d112e',
+                color: '#fff'
+            });
+
+            let vendorAddress = "";
+            let vendorCode = headerData['เลขที่'] || ''; 
+            let vendorPhone = headerData['โทรศัพท์'] || '';
+
+            try {
+                const infoRes = await fetch(`/api/customer_info?name=${encodeURIComponent(vendorName)}`);
+                const infoData = await infoRes.json();
+                if (infoData.success) {
+                    vendorAddress = infoData.address || "";
+                    // หากใน Sheet precher_pr ไม่มีรหัส (เลขที่) ให้ใช้จากตารางลูกค้าแทน
+                    if (!vendorCode) vendorCode = infoData.code || "";
+                    // หากใน Sheet precher_pr ไม่มีเบอร์โทร ให้ใช้จากตารางลูกค้าแทน
+                    if (!vendorPhone) vendorPhone = infoData.phone || "";
+                }
+            } catch (e) {
+                console.warn("Could not fetch vendor info:", e);
+            }
             
             const payload = {
                 id: currentEditId,
                 orderDate: headerData['วันที่'] || '',
-                picName: headerData['PIC'] || '',
-                sellerName: headerData['ลูกค้า-ผู้ขาย'] || '',
-                note: headerData['โทรศัพท์'] || '',
-                picDepartment: '',
-                title: 'ใบเสนอซื้อ (PR) ',
-                vat: Number(totalVat.toFixed(2)),
+                title: 'ใบสั่งซื้อ',
+                customerCode: vendorCode, 
+                contactName: headerData['ผู้ติดต่อ'] || '', 
+                vendorName: vendorName,
+                vendorAddress: vendorAddress, 
+                vendorPhone: vendorPhone,
+                vendorPhoneExtra: headerData['เบอร์ติดต่อเพิ่มเติม'] || '',
+                approvalNo: headerData['id'] || '',
+                deliveryDate: headerData['วันที่ส่งมอบ'] || '', 
+                creditDays: headerData['เครดิต (วัน)'] || '',
+                paymentTerms: headerData['ประเภทธุรกรรม'] || '',
+                preparedBy: preparedByName,
+                authorizedBy: '', 
                 grandTotal: Number(grandTotal.toFixed(2)),
-                // นำ Object ไปใส่ใน Array ตามรูปแบบที่ต้องการ
-                items: [itemsObject]
+                vat: Number(totalVat.toFixed(2)),
+                items: itemsArray
             };
 
-            // Show loading
             Swal.fire({
-                title: 'กำลังเตรียมไฟล์ PDF...',
+                title: 'กำลังสร้าง PDF...',
                 text: 'กรุณารอสักครู่',
                 allowOutsideClick: false,
                 didOpen: () => {
@@ -415,29 +465,29 @@
             });
 
             try {
-                const response = await fetch('/api/generate-pdf-link', {
+                const response = await fetch('/api/generate-po-pdf', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                const result = await response.json();
-
                 if (!response.ok) {
-                    throw new Error(result.error || 'PDF Generation failed');
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'PDF Generation failed');
                 }
 
-                if (result.pdf_link) {
-                    // เปิดลิงก์ PDF ใน Tab ใหม่
-                    window.open(result.pdf_link, '_blank');
-                    Swal.close();
-                    Toast.fire({
-                        icon: 'success',
-                        title: 'เปิดดู PDF สำเร็จ'
-                    });
-                } else {
-                    throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ');
-                }
+                // รับข้อมูลเป็น Blob (ไฟล์ PDF)
+                const blob = await response.blob();
+                const pdfUrl = URL.createObjectURL(blob);
+
+                // เปิด PDF ใน Tab ใหม่
+                window.open(pdfUrl, '_blank');
+                
+                Swal.close();
+                Toast.fire({
+                    icon: 'success',
+                    title: 'สร้าง PDF สำเร็จ'
+                });
             } catch (err) {
                 console.error('Print error:', err);
                 Swal.fire({

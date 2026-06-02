@@ -127,6 +127,7 @@ const dependencies = { getsheet, sheetsWrite, sheets, sheetCache, fs, path, proc
 
 // Auth routes (No login required)
 app.use('/', require('./routes/auth')(dependencies));
+app.use('/', require('./routes/token_auth')(dependencies));
 
 // All other routes (Login required)
 app.use(requireLogin);

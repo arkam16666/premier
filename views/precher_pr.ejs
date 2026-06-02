@@ -54,7 +54,7 @@
       <a href="/precher_pr?status=ทั้งหมด&search=<%= search %>" class="status-tab <%= currentStatus === 'ทั้งหมด' ? 'active' : '' %>">
         <i class="fas fa-list"></i> ทั้งหมด
       </a>
-      <a href="/precher_pr?status=ยังไม่ยืนยัน&search=<%= search %>" class="status-tab <%= currentStatus === 'ยังไม่ยังยืนยัน' ? 'active' : '' %>">
+      <a href="/precher_pr?status=ยังไม่ยืนยัน&search=<%= search %>" class="status-tab <%= currentStatus === 'ยังไม่ยืนยัน' ? 'active' : '' %>">
         <i class="fas fa-clock"></i> ยังไม่ยืนยัน
       </a>
       <a href="/precher_pr?status=ยืนยันแล้ว&search=<%= search %>" class="status-tab <%= currentStatus === 'ยืนยันแล้ว' ? 'active' : '' %>">
@@ -102,6 +102,7 @@
                 </th>
                 <% }) %>
                   <th style="text-align: center;">จัดการ</th>
+                  <th style="text-align: center;">พิมพ์</th>
                   <th style="text-align: center;">ยืนยัน</th>
                   <th style="text-align: center;">ลบ</th>
                   <% } %>
@@ -126,6 +127,11 @@
                     <td style="text-align: center;">
                       <a href="/edit_purchase?id=<%= row['id'] %>" class="action-btn edit-btn" title="แก้ไข">
                         <i class="fas fa-edit"></i>
+                      </a>
+                    </td>
+                    <td style="text-align: center;">
+                      <a href="javascript:void(0);" onclick="printPO('<%= row['id'] %>', '<%= encodeURIComponent(JSON.stringify(row)) %>')" class="action-btn" style="color: #4ade80;" title="พิมพ์ PO">
+                        <i class="fas fa-print"></i>
                       </a>
                     </td>
                     <td style="text-align: center;">
@@ -159,6 +165,105 @@
   </main>
 
   <script>
+    async function printPO(id, encodedRow) {
+      const headerData = JSON.parse(decodeURIComponent(encodedRow));
+      const vendorName = headerData['ลูกค้า-ผู้ขาย'] || '';
+      const preparedByName = '<%= user ? user['ชื่อpic'] : "Unknown" %>';
+
+      Swal.fire({
+        title: 'กำลังดึงข้อมูล...',
+        text: 'กรุณารอสักครู่',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+        background: '#1d112e',
+        color: '#fff'
+      });
+
+      try {
+        // 1. ดึงข้อมูลลูกค้า
+        let vendorAddress = "";
+        let vendorCode = headerData['เลขที่'] || '';
+        let vendorPhone = headerData['โทรศัพท์'] || '';
+
+        try {
+            const infoRes = await fetch(`/api/customer_info?name=${encodeURIComponent(vendorName)}`);
+            const infoData = await infoRes.json();
+            if (infoData.success) {
+                vendorAddress = infoData.address || "";
+                if (!vendorCode) vendorCode = infoData.code || "";
+                if (!vendorPhone) vendorPhone = infoData.phone || "";
+            }
+        } catch (e) {
+            console.warn("Could not fetch vendor info:", e);
+        }
+
+        // 2. ดึงข้อมูลสินค้าของ ID นี้
+        const responseSub = await fetch(`/api/sub_purchase?id=${id}`);
+        const subData = await responseSub.json();
+        
+        if (!subData.success || !subData.items.length) {
+            throw new Error('ไม่พบรายการสินค้าสำหรับ ID นี้');
+        }
+
+        const itemsArray = subData.items.map((item, index) => {
+            const itemObj = {};
+            itemObj[`item${index + 1}`] = {
+                'sku': item['สินค้า'] || '',
+                'productName': item['ชื่อสินค้า'] || '',
+                'qty': (item['จำนวน'] || '0').toString(),
+                'unitPrice': (item['ราคาต่อหน่วย'] || '0').toString(),
+                'total': (item['รวม'] || item['จำนวนเงิน'] || '0').toString()
+            };
+            return itemObj;
+        });
+
+        const payload = {
+            id: id,
+            orderDate: headerData['วันที่'] || '',
+            title: 'ใบสั่งซื้อ',
+            customerCode: vendorCode,
+            contactName: headerData['ผู้ติดต่อ'] || '', 
+            vendorName: vendorName,
+            vendorAddress: vendorAddress,
+            vendorPhone: vendorPhone,
+            vendorPhoneExtra: headerData['เบอร์ติดต่อเพิ่มเติม'] || '',
+            approvalNo: id,
+            deliveryDate: headerData['วันที่ส่งมอบ'] || '', 
+            creditDays: headerData['เครดิต (วัน)'] || '',
+            paymentTerms: headerData['ประเภทธุรกรรม'] || '',
+            preparedBy: preparedByName,
+            grandTotal: subData.items.reduce((sum, item) => sum + (parseFloat(item['รวม'] || item['จำนวนเงิน']) || 0), 0),
+            vat: subData.items.reduce((sum, item) => sum + (parseFloat(item['ภาษี']) || 0), 0),
+            items: itemsArray
+        };
+
+        const printRes = await fetch('/api/generate-po-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!printRes.ok) throw new Error('ไม่สามารถสร้าง PDF ได้');
+
+        const blob = await printRes.blob();
+        const pdfUrl = URL.createObjectURL(blob);
+        window.open(pdfUrl, '_blank');
+        Swal.close();
+
+      } catch (err) {
+        console.error('Print Error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: err.message,
+          background: '#1d112e',
+          color: '#fff'
+        });
+      }
+    }
+
     async function confirmSendWebhook(element, id) {
       const result = await Swal.fire({
         title: 'ยืนยันการส่งข้อมูล?',

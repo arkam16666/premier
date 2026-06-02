@@ -23,6 +23,62 @@ module.exports = (dependencies) => {
         }
     });
 
+    // ดึงข้อมูลรายการย่อยของ Purchase Request
+    router.get("/api/sub_purchase", async (req, res) => {
+        const { id } = req.query;
+        if (!id) return res.status(400).json({ success: false, error: "Missing ID" });
+        const { getsheet } = dependencies;
+        try {
+            const items = await getsheet(id, "sub_precher_pr");
+            res.json({ success: true, items });
+        } catch (err) {
+            res.status(500).json({ success: false, error: err.message });
+        }
+    });
+
+    // Proxy สำหรับสร้าง PO PDF (เพื่อแก้ปัญหา CORS)
+    router.post('/api/generate-po-pdf', async (req, res) => {
+        try {
+            const response = await fetch('https://pdf.thanadon.click/api/generate-pdf/po', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(req.body)
+            });
+            
+            if (!response.ok) {
+                const errText = await response.text();
+                return res.status(response.status).send(errText);
+            }
+
+            const buffer = Buffer.from(await response.arrayBuffer());
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', 'inline; filename=po.pdf');
+            res.send(buffer);
+        } catch (error) {
+            console.error("[ERROR] generate-po-pdf proxy:", error.message);
+            res.status(500).json({ error: "ไม่สามารถเชื่อมต่อกับ PDF Service ได้" });
+        }
+    });
+
+    // ดึงข้อมูลลูกค้า (ที่อยู่, รหัส, เบอร์โทร)
+    router.get("/api/customer_info", async (req, res) => {
+        const { name } = req.query;
+        if (!name) return res.status(400).json({ success: false, error: "Missing Name" });
+        const { getsheet } = dependencies;
+        try {
+            const customers = await getsheet(null, "customer");
+            const customer = customers.find(c => (c['ชื่อลูกค้า/ผู้ขาย'] || '').toString().trim() === name.trim());
+            res.json({ 
+                success: true, 
+                address: customer ? customer['ที่อยู่ 1'] : "",
+                code: customer ? customer['รหัสลูกค้า/ผู้ขาย'] : "",
+                phone: customer ? customer['โทรศัพท์'] : ""
+            });
+        } catch (err) {
+            res.status(500).json({ success: false, error: err.message });
+        }
+    });
+
     // 1. ส่งข้อมูลไปให้ Python Generate PDF และรับไฟล์ PDF กลับมาตรงๆ (Direct Stream)
     router.post('/api/generate-pdf', async (req, res) => {
         try {
