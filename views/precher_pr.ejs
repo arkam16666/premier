@@ -102,7 +102,6 @@
                 </th>
                 <% }) %>
                   <th style="text-align: center;">จัดการ</th>
-                  <th style="text-align: center;">พิมพ์</th>
                   <th style="text-align: center;">ยืนยัน</th>
                   <th style="text-align: center;">ลบ</th>
                   <% } %>
@@ -127,11 +126,6 @@
                     <td style="text-align: center;">
                       <a href="/edit_purchase?id=<%= row['id'] %>" class="action-btn edit-btn" title="แก้ไข">
                         <i class="fas fa-edit"></i>
-                      </a>
-                    </td>
-                    <td style="text-align: center;">
-                      <a href="javascript:void(0);" onclick="printPO('<%= row['id'] %>', '<%= encodeURIComponent(JSON.stringify(row)) %>')" class="action-btn" style="color: #4ade80;" title="พิมพ์ PO">
-                        <i class="fas fa-print"></i>
                       </a>
                     </td>
                     <td style="text-align: center;">
@@ -219,23 +213,30 @@
             return itemObj;
         });
 
+        const d = new Date();
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        const formattedDate = `${day}/${month}/${year}`;
+
         const payload = {
             id: id,
-            orderDate: headerData['วันที่'] || '',
+            orderDate: formattedDate,
             title: 'ใบสั่งซื้อ',
+            title_eng: 'Purchase Order',
             customerCode: vendorCode,
             contactName: headerData['ผู้ติดต่อ'] || '', 
             vendorName: vendorName,
             vendorAddress: vendorAddress,
             vendorPhone: vendorPhone,
-            vendorPhoneExtra: headerData['เบอร์ติดต่อเพิ่มเติม'] || '',
             approvalNo: id,
             deliveryDate: headerData['วันที่ส่งมอบ'] || '', 
             creditDays: headerData['เครดิต (วัน)'] || '',
             paymentTerms: headerData['ประเภทธุรกรรม'] || '',
             preparedBy: preparedByName,
-            grandTotal: subData.items.reduce((sum, item) => sum + (parseFloat(item['รวม'] || item['จำนวนเงิน']) || 0), 0),
-            vat: subData.items.reduce((sum, item) => sum + (parseFloat(item['ภาษี']) || 0), 0),
+            authorizedBy: '',
+            grandTotal: Number(subData.items.reduce((sum, item) => sum + (parseFloat(item['รวม'] || item['จำนวนเงิน']) || 0), 0).toFixed(2)),
+            vat: Number(subData.items.reduce((sum, item) => sum + (parseFloat(item['ภาษี']) || 0), 0).toFixed(2)),
             items: itemsArray
         };
 
@@ -245,12 +246,25 @@
           body: JSON.stringify(payload)
         });
 
-        if (!printRes.ok) throw new Error('ไม่สามารถสร้าง PDF ได้');
+        const contentType = printRes.headers.get('content-type');
 
-        const blob = await printRes.blob();
-        const pdfUrl = URL.createObjectURL(blob);
-        window.open(pdfUrl, '_blank');
-        Swal.close();
+        if (contentType && contentType.includes('application/json')) {
+            const result = await printRes.json();
+            if (result.pdf_link) {
+                window.open(result.pdf_link, '_blank');
+                Swal.close();
+            } else {
+                throw new Error(result.error || 'ไม่สามารถสร้าง PDF ได้');
+            }
+        } else if (contentType && contentType.includes('application/pdf')) {
+            const blob = await printRes.blob();
+            const pdfUrl = URL.createObjectURL(blob);
+            window.open(pdfUrl, '_blank');
+            Swal.close();
+        } else {
+            const errorText = await printRes.text();
+            throw new Error(errorText || 'ไม่สามารถสร้าง PDF ได้');
+        }
 
       } catch (err) {
         console.error('Print Error:', err);

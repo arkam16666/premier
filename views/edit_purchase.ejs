@@ -432,16 +432,22 @@
                 console.warn("Could not fetch vendor info:", e);
             }
             
+            const d = new Date();
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const formattedDate = `${day}/${month}/${year}`;
+
             const payload = {
                 id: currentEditId,
-                orderDate: headerData['วันที่'] || '',
-                title: 'ใบสั่งซื้อ',
+                orderDate: formattedDate,
+                title: 'ใบเสนอซื้อ',
+                title_eng: 'Purchase Order',
                 customerCode: vendorCode, 
                 contactName: headerData['ผู้ติดต่อ'] || '', 
                 vendorName: vendorName,
                 vendorAddress: vendorAddress, 
                 vendorPhone: vendorPhone,
-                vendorPhoneExtra: headerData['เบอร์ติดต่อเพิ่มเติม'] || '',
                 approvalNo: headerData['id'] || '',
                 deliveryDate: headerData['วันที่ส่งมอบ'] || '', 
                 creditDays: headerData['เครดิต (วัน)'] || '',
@@ -471,23 +477,27 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) {
+                const contentType = response.headers.get('content-type');
+
+                if (contentType && contentType.includes('application/json')) {
+                    const result = await response.json();
+                    if (result.pdf_link) {
+                        window.open(result.pdf_link, '_blank');
+                        Swal.close();
+                        Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
+                    } else {
+                        throw new Error(result.error || 'ไม่สามารถสร้าง PDF ได้');
+                    }
+                } else if (contentType && contentType.includes('application/pdf')) {
+                    const blob = await response.blob();
+                    const pdfUrl = URL.createObjectURL(blob);
+                    window.open(pdfUrl, '_blank');
+                    Swal.close();
+                    Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
+                } else {
                     const errorText = await response.text();
                     throw new Error(errorText || 'PDF Generation failed');
                 }
-
-                // รับข้อมูลเป็น Blob (ไฟล์ PDF)
-                const blob = await response.blob();
-                const pdfUrl = URL.createObjectURL(blob);
-
-                // เปิด PDF ใน Tab ใหม่
-                window.open(pdfUrl, '_blank');
-                
-                Swal.close();
-                Toast.fire({
-                    icon: 'success',
-                    title: 'สร้าง PDF สำเร็จ'
-                });
             } catch (err) {
                 console.error('Print error:', err);
                 Swal.fire({

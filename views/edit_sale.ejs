@@ -387,25 +387,65 @@
             }
 
             const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+            const customerName = headerData['ลูกค้า-ผู้ขาย'] || '';
             const picInfo = <%- JSON.stringify(picInfo || {}) %>;
             const currentUser = <%- JSON.stringify(user || {}) %>;
+
+            // Show loading for data fetching
+            Swal.fire({
+                title: 'กำลังเตรียมข้อมูล...',
+                text: 'กำลังดึงที่อยู่คู่ค้า',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+                background: '#1d112e',
+                color: '#fff'
+            });
+
+            let vendorAddress = "";
+            let vendorCode = headerData['เลขที่'] || ''; 
+            let vendorPhone = headerData['โทรศัพท์'] || '';
+
+            try {
+                const infoRes = await fetch(`/api/customer_info?name=${encodeURIComponent(customerName)}`);
+                const infoData = await infoRes.json();
+                if (infoData.success) {
+                    vendorAddress = infoData.address || "";
+                    if (!vendorCode) vendorCode = infoData.code || "";
+                    if (!vendorPhone) vendorPhone = infoData.phone || "";
+                }
+            } catch (e) {
+                console.warn("Could not fetch vendor info:", e);
+            }
+            
+            const d = new Date();
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const formattedDate = `${day}/${month}/${year}`;
             
             const payload = {
                 id: currentEditId,
-                orderDate: headerData['วันที่'] || '',
+                orderDate: formattedDate,
                 picName: currentUser['ชื่อpic'] || headerData['PIC'] || '',
-                sellerName: headerData['ลูกค้า-ผู้ขาย'] || '',
-                note: headerData['โทรศัพท์'] || '',
                 picDepartment: currentUser['แผนก'] || (picInfo['แผนก'] || '').trim(),
-                printedBy: {
-                    name: currentUser['ชื่อpic'] || '',
-                    department: currentUser['แผนก'] || ''
-                },
+                section: currentUser['แผนก'] || (picInfo['แผนก'] || '').trim(),
                 title: 'ใบเสนอราคา ',
+                title_eng: 'Quotation',
+                customerCode: vendorCode,
+                contactName: headerData['ผู้ติดต่อ'] || '',
+                vendorName: customerName,
+                vendorAddress: vendorAddress,
+                vendorPhone: vendorPhone,
+                approvalNo: currentEditId,
+                deliveryDate: headerData['วันที่ส่งมอบ'] || '',
+                creditDays: headerData['เครดิต (วัน)'] || '',
+                paymentTerms: headerData['ประเภทธุรกรรม'] || '',
+                preparedBy: currentUser['ชื่อpic'] || '',
+                authorizedBy: '',
                 vat: Number(totalVat.toFixed(2)),
                 grandTotal: Number(grandTotal.toFixed(2)),
-                title_eng: 'Sale So',
-                // นำ Object ไปใส่ใน Array ตามรูปแบบที่ต้องการ
                 items: [itemsObject]
             };
 

@@ -4,8 +4,8 @@ module.exports = (dependencies) => {
     const router = express.Router();
     const { sheets, process } = dependencies;
 
-    // ดึง URL ของ Python API จาก .env หรือใช้ default เป็น localhost:4000
-    const PYTHON_API_BASE = process.env.PYTHON_API_BASE || 'http://localhost:4000';
+    // ดึง URL ของ Python API จาก .env หรือใช้ default เป็น https://pdf.thanadon.click
+    const PYTHON_API_BASE = process.env.PYTHON_API_BASE || 'https://pdf.thanadon.click';
 
     router.get("/api/sheets", async (req, res) => {
         try {
@@ -36,27 +36,56 @@ module.exports = (dependencies) => {
         }
     });
 
+    // ดึงข้อมูลรายการย่อยของ Sale Request
+    router.get("/api/sub_sale", async (req, res) => {
+        const { id } = req.query;
+        if (!id) return res.status(400).json({ success: false, error: "Missing ID" });
+        const { getsheet } = dependencies;
+        try {
+            const items = await getsheet(id, "sub_sales_pr");
+            res.json({ success: true, items });
+        } catch (err) {
+            res.status(500).json({ success: false, error: err.message });
+        }
+    });
+
     // Proxy สำหรับสร้าง PO PDF (เพื่อแก้ปัญหา CORS)
     router.post('/api/generate-po-pdf', async (req, res) => {
         try {
-            const response = await fetch('https://pdf.thanadon.click/api/generate-pdf/po', {
+            console.log("[DEBUG] Requesting PO PDF from Python...");
+            const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf/po`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(req.body)
             });
             
-            if (!response.ok) {
-                const errText = await response.text();
-                return res.status(response.status).send(errText);
+            const buffer = Buffer.from(await response.arrayBuffer());
+            const firstBytes = buffer.toString('utf8', 0, 100);
+
+            // 1. ถ้าเป็น PDF จริงๆ
+            if (buffer.length >= 4 && buffer.toString('utf8', 0, 4) === '%PDF') {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', 'inline; filename=po.pdf');
+                return res.send(buffer);
             }
 
-            const buffer = Buffer.from(await response.arrayBuffer());
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'inline; filename=po.pdf');
-            res.send(buffer);
+            // 2. ถ้าเป็น JSON (เช่น ส่งลิงก์มาให้ หรือ Error)
+            if (firstBytes.trim().startsWith('{') || firstBytes.trim().startsWith('[')) {
+                try {
+                    const result = JSON.parse(buffer.toString());
+                    return res.status(response.status).json(result);
+                } catch (e) {
+                    // ถ้า parse ไม่ได้ให้ข้ามไป
+                }
+            }
+
+            // 3. กรณีอื่นๆ
+            console.error("[ERROR] Received invalid PDF/JSON data for PO.");
+            return res.status(500).json({ error: "ข้อมูลที่ได้รับจากเครื่องมือสร้าง PDF ไม่ถูกต้อง" });
+            
         } catch (error) {
             console.error("[ERROR] generate-po-pdf proxy:", error.message);
-            res.status(500).json({ error: "ไม่สามารถเชื่อมต่อกับ PDF Service ได้" });
+            res.status(500).json({ error: "ไม่สามารถเชื่อมต่อกับ PDF Service ได้: " + error.message });
         }
     });
 
@@ -82,34 +111,30 @@ module.exports = (dependencies) => {
     // 1. ส่งข้อมูลไปให้ Python Generate PDF และรับไฟล์ PDF กลับมาตรงๆ (Direct Stream)
     router.post('/api/generate-pdf', async (req, res) => {
         try {
-            console.log("[DEBUG] Sending data to Python PDF Service...");
+            console.log("[DEBUG] Sending data to Python PDF Service (Stream)...");
             const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(req.body)
             });
             
-            if (!response.ok) {
-                const errResult = await response.json().catch(() => ({ error: "Unknown error" }));
-                console.error("[ERROR] Python service error:", errResult);
-                return res.status(response.status).json(errResult);
+            const buffer = Buffer.from(await response.arrayBuffer());
+            const firstBytes = buffer.toString('utf8', 0, 100);
+
+            if (buffer.length >= 4 && buffer.toString('utf8', 0, 4) === '%PDF') {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', response.headers.get('content-disposition') || 'inline; filename=report.pdf');
+                return res.send(buffer);
             }
 
-            const contentType = response.headers.get('content-type');
-            
-            // ถ้า Python ส่ง PDF กลับมาให้ส่งต่อทันที
-            if (contentType && contentType.includes('application/pdf')) {
-                const arrayBuffer = await response.arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer);
-                res.setHeader('Content-Type', 'application/pdf');
-                // ดึงชื่อไฟล์จาก header ถ้ามี หรือตั้งเอง
-                res.setHeader('Content-Disposition', response.headers.get('content-disposition') || 'attachment; filename=report.pdf');
-                return res.send(buffer);
-            } else {
-                // ถ้าไม่ใช่ PDF (เช่น error เป็น JSON)
-                const result = await response.json();
-                res.status(response.status).json(result);
+            if (firstBytes.trim().startsWith('{') || firstBytes.trim().startsWith('[')) {
+                try {
+                    const result = JSON.parse(buffer.toString());
+                    return res.status(response.status).json(result);
+                } catch (e) { }
             }
+
+            return res.status(500).json({ error: "ข้อมูลที่ได้รับไม่ใช่รูปแบบ PDF ที่ถูกต้อง" });
         } catch (error) {
             console.error("[ERROR] generate-pdf proxy:", error.message);
             res.status(500).json({ error: "ไม่สามารถเชื่อมต่อกับ Python PDF Service ได้" });
@@ -161,8 +186,9 @@ module.exports = (dependencies) => {
     // 3. ส่งข้อมูลไปให้ Python สร้างลิงก์ PDF ถาวร
     router.post('/api/generate-pdf-link', async (req, res) => {
         try {
-            console.log("[DEBUG] Requesting PDF Link from Python...");
-            const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf-link`, {
+            const template = req.body.template || 'index';
+            console.log(`[DEBUG] Requesting PDF Link (${template}) from Python...`);
+            const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf-link/${template}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(req.body)

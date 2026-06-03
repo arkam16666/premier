@@ -158,6 +158,121 @@
   </main>
 
   <script>
+    async function printSale(id, encodedRow) {
+      const headerData = JSON.parse(decodeURIComponent(encodedRow));
+      const customerName = headerData['ลูกค้า-ผู้ขาย'] || '';
+      const preparedByName = '<%= user ? user['ชื่อpic'] : "Unknown" %>';
+
+      Swal.fire({
+        title: 'กำลังดึงข้อมูล...',
+        text: 'กรุณารอสักครู่',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+        background: '#1d112e',
+        color: '#fff'
+      });
+
+      try {
+        // 1. ดึงข้อมูลลูกค้า
+        let customerAddress = "";
+        let customerCode = headerData['เลขที่'] || '';
+        let customerPhone = headerData['โทรศัพท์'] || '';
+
+        try {
+            const infoRes = await fetch(`/api/customer_info?name=${encodeURIComponent(customerName)}`);
+            const infoData = await infoRes.json();
+            if (infoData.success) {
+                customerAddress = infoData.address || "";
+                if (!customerCode) customerCode = infoData.code || "";
+                if (!customerPhone) customerPhone = infoData.phone || "";
+            }
+        } catch (e) {
+            console.warn("Could not fetch customer info:", e);
+        }
+
+        // 2. ดึงข้อมูลสินค้าของ ID นี้
+        const responseSub = await fetch(`/api/sub_sale?id=${id}`);
+        const subData = await responseSub.json();
+        
+        if (!subData.success || !subData.items.length) {
+            throw new Error('ไม่พบรายการสินค้าสำหรับ ID นี้');
+        }
+
+        const itemsArray = subData.items.map((item, index) => {
+            const itemObj = {};
+            itemObj[`item${index + 1}`] = {
+                'sku': item['สินค้า'] || '',
+                'productName': item['ชื่อสินค้า'] || '',
+                'qty': (item['จำนวน'] || '0').toString(),
+                'unitPrice': (item['ราคาต่อหน่วย'] || '0').toString(),
+                'total': (item['รวม'] || item['จำนวนเงิน'] || '0').toString()
+            };
+            return itemObj;
+        });
+
+        // ใช้ "วันที่แก้ไขล่าสุด" (วันที่กดส่ง) ถ้ามี ถ้าไม่มีให้ใช้วันที่ปัจจุบัน
+        const sendingDate = headerData['วันที่แก้ไขล่าสุด'] ? headerData['วันที่แก้ไขล่าสุด'].split(' ')[0] : new Date().toLocaleDateString('th-TH');
+
+        const d = new Date();
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        const formattedDate = `${day}/${month}/${year}`;
+
+        const payload = {
+            id: id,
+            orderDate: formattedDate,
+            title: 'ใบเสนอราคา',
+            title_eng: 'Quotation',
+            customerCode: customerCode,
+            contactName: headerData['ผู้ติดต่อ'] || '', 
+            vendorName: customerName,
+            vendorAddress: customerAddress,
+            vendorPhone: customerPhone,
+            approvalNo: id,
+            deliveryDate: headerData['วันที่ส่งมอบ'] || '', 
+            creditDays: headerData['เครดิต (วัน)'] || '',
+            paymentTerms: headerData['ประเภทธุรกรรม'] || '',
+            preparedBy: preparedByName,
+            picName: preparedByName,
+            picDepartment: '', 
+            section: '',
+            grandTotal: Number(subData.items.reduce((sum, item) => sum + (parseFloat(item['รวม'] || item['จำนวนเงิน']) || 0), 0).toFixed(2)),
+            vat: Number(subData.items.reduce((sum, item) => sum + (parseFloat(item['ภาษี']) || 0), 0).toFixed(2)),
+            items: itemsArray
+        };
+
+        const printRes = await fetch('/api/generate-pdf-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await printRes.json();
+
+        if (!printRes.ok) throw new Error(result.error || 'ไม่สามารถสร้าง PDF ได้');
+
+        if (result.pdf_link) {
+            window.open(result.pdf_link, '_blank');
+            Swal.close();
+        } else {
+            throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ');
+        }
+
+        } catch (err) {
+        console.error('Print Error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: err.message,
+          background: '#1d112e',
+          color: '#fff'
+        });
+      }
+    }
+
     async function confirmSendWebhook(element, id) {
       const result = await Swal.fire({
         title: 'ยืนยันการส่งข้อมูล?',

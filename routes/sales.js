@@ -20,7 +20,7 @@ module.exports = (dependencies) => {
     router.get("/sale_pr", async (req, res) => {
         try {
             const data = await getsheet(null, "Sale_pr");
-            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
+            const allowedHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "สถานะเอกสาร"];
             const searchQuery = (req.query.search || "").trim().toLowerCase();
             const statusFilter = (req.query.status || "ทั้งหมด");
 
