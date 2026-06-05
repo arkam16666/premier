@@ -135,6 +135,7 @@ app.use('/', require('./routes/dashboard')(dependencies));
 app.use('/', require('./routes/sales')(dependencies));
 app.use('/', require('./routes/inventory')(dependencies));
 app.use('/', require('./routes/pr')(dependencies));
+app.use('/', require('./routes/po')(dependencies));
 app.use('/', require('./routes/ai')(dependencies));
 app.use('/', require('./routes/api')(dependencies));
 

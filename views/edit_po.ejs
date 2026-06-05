@@ -10,26 +10,27 @@
         rel="stylesheet">
     <link rel="stylesheet" href="menubar.css">
     <link rel="stylesheet" href="edit_sale.css">
+    <link rel="stylesheet" href="edit_sale_so.css"> <!-- Reusing styles -->
     <link rel="stylesheet" href="model.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <title>แก้ไขออเดอร์</title>
+    <title>แก้ไข Purchase PO</title>
 </head>
 
 <body>
     <aside class="sidebar">
         <div class="logo">
             <h2>ระบบ ERP</h2>
-            <span>ระดับจงกร</span><br>
+            <span>ระดับจัดการ</span><br>
         </div>
 
         <nav class="menu">
             <a href="<%= baseUrl %>/">Dashboard</a>
             <a href="<%= baseUrl %>/add_sale">เพิ่มออเดอร์</a>
-            <a href="<%= baseUrl %>/sale_pr" class="active">เสนอขาย</a>
+            <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
             <a href="<%= baseUrl %>/sale_so">Sale SO</a>
             <a href="<%= baseUrl %>/precher_pr">เสนอซื้อ</a>
-            <a href="<%= baseUrl %>/purchase_order">Purchase PO</a>
+            <a href="<%= baseUrl %>/purchase_order" class="active">Purchase PO</a>
             <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
             <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
         </nav>
@@ -46,14 +47,35 @@
     <main class="main-content">
 
         <% if (order && order.length> 0) { %>
-            <h1>แก้ไขข้อมูลการเสนอขาย สำหรับ <%= order[0]['ลูกค้า-ผู้ขาย'] %>
+            <h1>แก้ไขข้อมูล Purchase PO สำหรับ <%= order[0]['ลูกค้า-ผู้ขาย'] %>
             </h1>
             <% } else { %>
-                <h1>แก้ไขข้อมูลการเสนอขาย</h1>
+                <h1>แก้ไขข้อมูล Purchase PO</h1>
                 <% } %>
 
                     <!-- Summary Cards -->
                     <div class="summary-cards summary-cards-container">
+                        <div class="stat-card stat-card-custom">
+                          <div class="stat-icon stat-icon-custom">
+                            <i class="fas fa-coins"></i>
+                          </div>
+                          <div>
+                            <div class="stat-label">จำนวนเงินรวมทั้งหมด</div>
+                            <div id="summaryGrandTotal" class="stat-value">
+                              <% 
+                                let totalSum = 0;
+                                if (po_items && po_items.length > 0) {
+                                    po_items.forEach(row => {
+                                    const val = parseFloat(String(row['จำนวนเงินรวม'] || 0).replace(/,/g, ''));
+                                    if (!isNaN(val)) totalSum += val;
+                                  });
+                                }
+                              %>
+                              ฿<%= totalSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                            </div>
+                          </div>
+                        </div>
+
                         <div class="stat-card stat-card-custom">
                           <div class="stat-icon stat-icon-custom stat-icon-blue">
                             <i class="fas fa-file-invoice"></i>
@@ -61,7 +83,7 @@
                           <div>
                             <div class="stat-label">จำนวนรายการสินค้า</div>
                             <div id="summaryItemCount" class="stat-value">
-                              <%= sale_pr ? sale_pr.length : 0 %> รายการ
+                              <%= po_items ? po_items.length : 0 %> รายการ
                             </div>
                           </div>
                         </div>
@@ -86,15 +108,10 @@
                                 <% if (order && order.length> 0) { %>
                                     <% order.forEach(row=> { %>
                                         <tr>
-                                            <% Object.entries(row).forEach(([key, val])=> { %>
+                                            <% Object.values(row).forEach(val=> { %>
                                                 <td>
-                                                    <% if (key === 'สถานะเอกสาร') { %>
-                                                        <span class="status-badge <%= val === 'สำเร็จ' || val === 'ยืนยันแล้ว' ? 'status-success' : 'status-pending' %>">
-                                                            <%= val || 'ยังไม่ยืนยัน' %>
-                                                        </span>
-                                                    <% } else { %>
-                                                        <%= val %>
-                                                    <% } %>
+                                                    <%= val %>
+
                                                 </td>
                                                 <% }) %>
                                                     <td class="text-center">
@@ -112,7 +129,7 @@
                         </table>
                     </div>
 
-                    <form action="/edit_sale" method="GET" class="search-form">
+                    <form action="/edit_po" method="GET" class="search-form">
                         <input type="hidden" name="id" value="<%= idToEdit %>">
                         <div class="search-input-group">
                             <i class="fas fa-search"></i>
@@ -122,7 +139,7 @@
                         <button type="submit" class="btn-search">
                             <i class="fas fa-search"></i> ค้นหา
                         </button>
-                        <a href="/sale_pr" class="btn-clear">
+                        <a href="/purchase_order" class="btn-clear">
                             <i class="fas fa-sync-alt"></i> ล้างค่า
                         </a>
                     </form>
@@ -140,11 +157,12 @@
                                     <th class="text-right">ราคาต่อหน่วย</th>
                                     <th class="text-right">จำนวนเงิน</th>
                                     <th class="text-right">ภาษี</th>
+                                    <th class="text-right">จำนวนเงินรวม</th>
                                 </tr>
                             </thead>
-                            <tbody id="salePrBody">
-                                <% if (sale_pr && sale_pr.length> 0) { %>
-                                    <% sale_pr.forEach(row=> { %>
+                            <tbody id="purchasePrBody"> <!-- ID expected by model_purchase.js -->
+                                <% if (po_items && po_items.length> 0) { %>
+                                    <% po_items.forEach(row=> { %>
                                         <tr class="item-row" data-product="<%= row['สินค้า'] %>">
                                             <td class="text-center">
                                                 <input type="checkbox" class="item-checkbox">
@@ -159,6 +177,7 @@
                                             <td class="text-right"><%= row['ราคาต่อหน่วย'] %></td>
                                             <td class="text-right"><%= row['จำนวนเงิน'] %></td>
                                             <td class="text-right"><%= row['ภาษี'] %></td>
+                                            <td class="item-total text-right"><%= row['จำนวนเงินรวม'] %></td>
                                         </tr>
                                     <% }) } else { %>
                                         <tr>
@@ -179,13 +198,15 @@
                             <script>
                                 // ข้อมูลพื้นฐานที่จำเป็นสำหรับ Modal และการบันทึก
                                 var allProducts = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(allProducts || [])) %>'));
-                                var rawSubSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
+                                var rawSubPoData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
                                 var rawOrderData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(order || [])) %>'));
-                                var rawSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawSalesData || [])) %>'));
+                                var rawPoData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawPoData || [])) %>'));
                                 var currentEditId = '<%= idToEdit %>';
                                 var pendingOrderChanges = null; 
+                                var sheetName = 'sub_precher_po';
+                                var mainSheetName = 'precher_po';
                             </script>
-                            <script src="model.js"></script>
+                            <script src="model_purchase.js"></script>
                             <button type="button" id="btnSoftDelete" onclick="softDelete()">ลบ</button>
                         </div>
                     </div>
@@ -241,11 +262,12 @@
                     icon: 'success',
                     title: 'ลบรายการชั่วคราวแล้ว'
                 });
+                recalculateTotals();
             }
         }
 
         async function saveChanges() {
-            const rows = document.querySelectorAll('#salePrBody .item-row');
+            const rows = document.querySelectorAll('#purchasePrBody .item-row');
             const finalItems = [];
 
             rows.forEach(row => {
@@ -301,7 +323,7 @@
             });
 
             try {
-                const response = await fetch('/api/save_changes', {
+                const response = await fetch('/api/save_changes_po', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -320,7 +342,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'บันทึกสำเร็จ!',
-                    text: 'ข้อมูลถูกอัปเดตเรียบร้อยแล้ว',
+                    text: 'ข้อมูล Purchase PO ถูกอัปเดตเรียบร้อยแล้ว',
                     background: '#1d112e',
                     color: '#fff',
                     confirmButtonColor: '#ff7eb3'
@@ -340,35 +362,37 @@
         }
 
         async function printPDF() {
-            const rows = document.querySelectorAll('#salePrBody .item-row');
+            const rows = document.querySelectorAll('#purchasePrBody .item-row');
             
-            // สร้าง Object สำหรับเก็บข้อมูลสินค้าโดยมี SKU เป็น Key
-            const itemsObject = {};
+            // สร้าง Array สำหรับเก็บรายการสินค้าในรูปแบบ {"item1": {...}, "item2": {...}}
+            const itemsArray = [];
+            let itemCount = 0;
 
             rows.forEach(row => {
                 if (row.style.display !== 'none') {
                     const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
                     if (qty > 0) {
+                        itemCount++;
                         const sku = row.cells[1].innerText.trim();
+                        const productName = row.cells[2].innerText.trim();
+                        const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
                         const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
                         const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                        itemsObject[sku] = {
+                        
+                        const itemObj = {};
+                        itemObj[`item${itemCount}`] = {
                             'sku': sku,
-                            'productName': row.cells[2].innerText,
-                            'info': row.cells[3].innerText,
-                            'qty': qty,
-                            'unit': row.cells[5].innerText,
-                            'unitPrice': parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0,
-                            'amount': amount,
-                            'vat': vat,
-                            'total': amount + vat
+                            'productName': productName,
+                            'qty': qty.toString(),
+                            'unitPrice': unitPrice.toFixed(2),
+                            'total': (amount + vat).toFixed(2)
                         };
+                        itemsArray.push(itemObj);
                     }
                 }
             });
 
-            const skuKeys = Object.keys(itemsObject);
-            if (skuKeys.length === 0) {
+            if (itemsArray.length === 0) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'ไม่มีรายการสินค้า',
@@ -379,20 +403,28 @@
                 return;
             }
 
-            // คำนวณยอดรวมจาก Object
+            // คำนวณยอดรวม
+            let totalAmount = 0; // ยอดรวมก่อนภาษี
             let totalVat = 0;
             let grandTotal = 0;
-            for (const key in itemsObject) {
-                totalVat += (itemsObject[key].vat || 0);
-                grandTotal += (itemsObject[key].total || 0);
-            }
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                    if (qty > 0) {
+                        const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
+                        const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                        totalAmount += amount;
+                        totalVat += vat;
+                        grandTotal += (amount + vat);
+                    }
+                }
+            });
 
-            const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+            const headerData = rawPoData.length > 0 ? rawPoData[0] : {};
             const customerName = headerData['ลูกค้า-ผู้ขาย'] || '';
-            const picInfo = <%- JSON.stringify(picInfo || {}) %>;
-            const currentUser = <%- JSON.stringify(user || {}) %>;
+            const preparedByName = '<%= user ? user['ชื่อpic'] : "Unknown" %>';
 
-            // Show loading for data fetching
+            // Show loading
             Swal.fire({
                 title: 'กำลังเตรียมข้อมูล...',
                 text: 'กำลังดึงที่อยู่คู่ค้า',
@@ -425,34 +457,31 @@
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const year = d.getFullYear();
             const formattedDate = `${day}/${month}/${year}`;
-            
+
             const payload = {
                 id: currentEditId,
                 orderDate: formattedDate,
-                picName: currentUser['ชื่อpic'] || headerData['PIC'] || '',
-                picDepartment: currentUser['แผนก'] || (picInfo['แผนก'] || '').trim(),
-                section: currentUser['แผนก'] || (picInfo['แผนก'] || '').trim(),
-                title: 'ใบเสนอราคา ',
-                title_eng: 'Quotation',
-                customerCode: vendorCode,
-                contactName: headerData['ผู้ติดต่อ'] || '',
+                title: 'ใบสั่งซื้อ',
+                title_eng: 'Purchase Order',
+                customerCode: vendorCode, 
+                contactName: headerData['ผู้ติดต่อ'] || '', 
                 vendorName: customerName,
-                vendorAddress: vendorAddress,
+                vendorAddress: vendorAddress, 
                 vendorPhone: vendorPhone,
-                approvalNo: currentEditId,
-                deliveryDate: headerData['วันที่ส่งมอบ'] || '',
+                approvalNo: headerData['id'] || '',
+                deliveryDate: headerData['วันที่ส่งมอบ'] || '', 
                 creditDays: headerData['เครดิต (วัน)'] || '',
                 paymentTerms: headerData['ประเภทธุรกรรม'] || '',
-                preparedBy: currentUser['ชื่อpic'] || '',
-                authorizedBy: '',
-                vat: Number(totalVat.toFixed(2)),
+                preparedBy: preparedByName,
+                authorizedBy: '', 
+                totalAmount: Number(totalAmount.toFixed(2)), // เพิ่มยอดรวมก่อนภาษี
                 grandTotal: Number(grandTotal.toFixed(2)),
-                items: [itemsObject]
+                vat: Number(totalVat.toFixed(2)),
+                items: itemsArray
             };
 
-            // Show loading
             Swal.fire({
-                title: 'กำลังเตรียมไฟล์ PDF...',
+                title: 'กำลังสร้าง PDF...',
                 text: 'กรุณารอสักครู่',
                 allowOutsideClick: false,
                 didOpen: () => {
@@ -463,28 +492,32 @@
             });
 
             try {
-                const response = await fetch('/api/generate-pdf-link', {
+                const response = await fetch('/api/generate-po-pdf', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                const result = await response.json();
+                const contentType = response.headers.get('content-type');
 
-                if (!response.ok) {
-                    throw new Error(result.error || 'PDF Generation failed');
-                }
-
-                if (result.pdf_link) {
-                    // เปิดลิงก์ PDF ใน Tab ใหม่
-                    window.open(result.pdf_link, '_blank');
+                if (contentType && contentType.includes('application/json')) {
+                    const result = await response.json();
+                    if (result.pdf_link) {
+                        window.open(result.pdf_link, '_blank');
+                        Swal.close();
+                        Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
+                    } else {
+                        throw new Error(result.error || 'ไม่สามารถสร้าง PDF ได้');
+                    }
+                } else if (contentType && contentType.includes('application/pdf')) {
+                    const blob = await response.blob();
+                    const pdfUrl = URL.createObjectURL(blob);
+                    window.open(pdfUrl, '_blank');
                     Swal.close();
-                    Toast.fire({
-                        icon: 'success',
-                        title: 'เปิดดู PDF สำเร็จ'
-                    });
+                    Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
                 } else {
-                    throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ');
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'PDF Generation failed');
                 }
             } catch (err) {
                 console.error('Print error:', err);
@@ -507,7 +540,7 @@
             const grid = document.getElementById('orderFormGrid');
             grid.innerHTML = '';
 
-            const currentData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+            const currentData = rawPoData.length > 0 ? rawPoData[0] : {};
             orderFields = Object.keys(currentData);
 
             orderFields.forEach(field => {
@@ -551,9 +584,9 @@
 
             pendingOrderChanges = updatedData;
 
-            if (rawSalesData.length > 0) {
+            if (rawPoData.length > 0) {
                 Object.keys(updatedData).forEach(function (key) {
-                    rawSalesData[0][key] = updatedData[key];
+                    rawPoData[0][key] = updatedData[key];
                 });
             }
             
