@@ -345,35 +345,32 @@
         async function printPDF() {
             const rows = document.querySelectorAll('#purchasePrBody .item-row');
             
-            // สร้าง Array สำหรับเก็บรายการสินค้าในรูปแบบ {"item1": {...}, "item2": {...}}
-            const itemsArray = [];
-            let itemCount = 0;
+            const itemsObject = {};
 
             rows.forEach(row => {
                 if (row.style.display !== 'none') {
                     const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
                     if (qty > 0) {
-                        itemCount++;
                         const sku = row.cells[1].innerText.trim();
-                        const productName = row.cells[2].innerText.trim();
-                        const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
                         const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
                         const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                        
-                        const itemObj = {};
-                        itemObj[`item${itemCount}`] = {
+                        itemsObject[sku] = {
                             'sku': sku,
-                            'productName': productName,
-                            'qty': qty.toString(),
-                            'unitPrice': unitPrice.toFixed(2),
-                            'total': (amount + vat).toFixed(2)
+                            'productName': row.cells[2].innerText,
+                            'info': row.cells[3].innerText,
+                            'qty': qty,
+                            'unit': row.cells[5].innerText,
+                            'unitPrice': parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0,
+                            'amount': amount,
+                            'vat': vat,
+                            'total': amount + vat
                         };
-                        itemsArray.push(itemObj);
                     }
                 }
             });
 
-            if (itemsArray.length === 0) {
+            const skuKeys = Object.keys(itemsObject);
+            if (skuKeys.length === 0) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'ไม่มีรายการสินค้า',
@@ -385,21 +382,12 @@
             }
 
             // คำนวณยอดรวม
-            let totalAmount = 0; // ยอดรวมก่อนภาษี
             let totalVat = 0;
             let grandTotal = 0;
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-                    if (qty > 0) {
-                        const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
-                        const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                        totalAmount += amount;
-                        totalVat += vat;
-                        grandTotal += (amount + vat);
-                    }
-                }
-            });
+            for (const key in itemsObject) {
+                totalVat += (itemsObject[key].vat || 0);
+                grandTotal += (itemsObject[key].total || 0);
+            }
 
             const headerData = rawPurchaseData.length > 0 ? rawPurchaseData[0] : {};
             const vendorName = headerData['ลูกค้า-ผู้ขาย'] || '';
@@ -426,9 +414,7 @@
                 const infoData = await infoRes.json();
                 if (infoData.success) {
                     vendorAddress = infoData.address || "";
-                    // หากใน Sheet precher_pr ไม่มีรหัส (เลขที่) ให้ใช้จากตารางลูกค้าแทน
                     if (!vendorCode) vendorCode = infoData.code || "";
-                    // หากใน Sheet precher_pr ไม่มีเบอร์โทร ให้ใช้จากตารางลูกค้าแทน
                     if (!vendorPhone) vendorPhone = infoData.phone || "";
                 }
             } catch (e) {
@@ -444,6 +430,7 @@
             const payload = {
                 id: currentEditId,
                 orderDate: formattedDate,
+                picName: preparedByName,
                 title: 'ใบเสนอซื้อ',
                 title_eng: 'Purchase Order',
                 customerCode: vendorCode, 
@@ -457,14 +444,13 @@
                 paymentTerms: headerData['ประเภทธุรกรรม'] || '',
                 preparedBy: preparedByName,
                 authorizedBy: '', 
-                totalAmount: Number(totalAmount.toFixed(2)), // เพิ่มยอดรวมก่อนภาษี
-                grandTotal: Number(grandTotal.toFixed(2)),
                 vat: Number(totalVat.toFixed(2)),
-                items: itemsArray
+                grandTotal: Number(grandTotal.toFixed(2)),
+                items: [itemsObject]
             };
 
             Swal.fire({
-                title: 'กำลังสร้าง PDF...',
+                title: 'กำลังเตรียมไฟล์ PDF...',
                 text: 'กรุณารอสักครู่',
                 allowOutsideClick: false,
                 didOpen: () => {
@@ -475,32 +461,24 @@
             });
 
             try {
-                const response = await fetch('/api/generate-po-pdf', {
+                const response = await fetch('/api/generate-pdf-link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                const contentType = response.headers.get('content-type');
+                const result = await response.json();
 
-                if (contentType && contentType.includes('application/json')) {
-                    const result = await response.json();
-                    if (result.pdf_link) {
-                        window.open(result.pdf_link, '_blank');
-                        Swal.close();
-                        Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
-                    } else {
-                        throw new Error(result.error || 'ไม่สามารถสร้าง PDF ได้');
-                    }
-                } else if (contentType && contentType.includes('application/pdf')) {
-                    const blob = await response.blob();
-                    const pdfUrl = URL.createObjectURL(blob);
-                    window.open(pdfUrl, '_blank');
+                if (!response.ok) {
+                    throw new Error(result.error || 'PDF Generation failed');
+                }
+
+                if (result.pdf_link) {
+                    window.open(result.pdf_link, '_blank');
                     Swal.close();
-                    Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
+                    Toast.fire({ icon: 'success', title: 'เปิดดู PDF สำเร็จ' });
                 } else {
-                    const errorText = await response.text();
-                    throw new Error(errorText || 'PDF Generation failed');
+                    throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ');
                 }
             } catch (err) {
                 console.error('Print error:', err);
