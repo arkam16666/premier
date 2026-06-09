@@ -7,6 +7,7 @@ const path = require("path");
 const fs = require("fs");
 const session = require("express-session");
 const FileStore = require('session-file-store')(session);
+const { logAction, getLogs } = require('./utils/logger');
 const app = express();
 
 app.set('view engine', 'ejs');
@@ -49,6 +50,13 @@ app.use((req, res, next) => {
 
 const requireLogin = (req, res, next) => {
     if (req.session && req.session.user) {
+        if (!req.session.user.role) {
+            const dept = (req.session.user['แผนก'] || '').toString().trim().toLowerCase();
+            if (dept === 'admin') req.session.user.role = 'admin';
+            else if (dept.includes('sales')) req.session.user.role = 'sales';
+            else if (dept.includes('procurement')) req.session.user.role = 'procurement';
+            else req.session.user.role = 'user';
+        }
         res.locals.user = req.session.user;
         next();
     } else {
@@ -123,7 +131,7 @@ async function getsheet(id, table) {
 }
 
 // --- Routes Injection ---
-const dependencies = { getsheet, sheetsWrite, sheets, sheetCache, fs, path, process };
+const dependencies = { getsheet, sheetsWrite, sheets, sheetCache, fs, path, process, logAction, getLogs };
 
 // Auth routes (No login required)
 app.use('/', require('./routes/auth')(dependencies));
@@ -138,7 +146,12 @@ app.use('/', require('./routes/pr')(dependencies));
 app.use('/', require('./routes/po')(dependencies));
 app.use('/', require('./routes/ai')(dependencies));
 app.use('/', require('./routes/api')(dependencies));
+app.use('/', require('./routes/audit')(dependencies));
 
 app.listen(process.env.PORT || 5000, "0.0.0.0", () =>
     console.log(`Server running on port http://localhost:${process.env.PORT || 5000}`)
 );
+
+// touch for nodemon restart
+
+// touch for nodemon restart

@@ -2,7 +2,7 @@ const express = require('express');
 
 module.exports = (dependencies) => {
     const router = express.Router();
-    const { getsheet, sheetsWrite, sheetCache, process, fs, path } = dependencies;
+    const { getsheet, sheetsWrite, sheetCache, process, fs, path, logAction } = dependencies;
 
     // Helper function for mapping data
     const mapDataByHeaders = (rawData, headers) => {
@@ -164,6 +164,7 @@ module.exports = (dependencies) => {
             }
 
             if (response.ok) {
+                if (logAction) logAction(user, 'Create Order', 'Created ' + orderType + ' order for ' + customerDetails, req.headers['x-forwarded-for'] || req.socket.remoteAddress);
                 return res.json({ 
                     success: true, 
                     webhookResponse: webhookResponseData 
@@ -454,6 +455,7 @@ module.exports = (dependencies) => {
                     }
                 }
             }
+            if (logAction) logAction(req.session ? req.session.user : null, 'Update Order', 'Updated order ID: ' + id, req.headers['x-forwarded-for'] || req.socket.remoteAddress);
             res.json({ success: true, message: "บันทึกการเปลี่ยนแปลงทั้งหมดเรียบร้อยแล้ว" });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -529,6 +531,7 @@ module.exports = (dependencies) => {
                     }
                 }
             }
+            if (logAction) logAction(req.session ? req.session.user : null, 'Update Order', 'Updated order ID: ' + id, req.headers['x-forwarded-for'] || req.socket.remoteAddress);
             res.json({ success: true, message: "บันทึกการเปลี่ยนแปลงทั้งหมดเรียบร้อยแล้ว" });
         } catch (err) {
             res.status(500).json({ error: err.message });

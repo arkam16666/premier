@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="menubar.css">
+    <link rel="stylesheet" href="sale_pr.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>ประวัติการใช้งานระบบ (Audit Log) - ERP</title>
+    <style>
+        .audit-table th { background: #1a1025; color: #ff7eb3; }
+        .log-action { font-weight: bold; }
+        .action-login { color: #4CAF50; }
+        .action-create { color: #2196F3; }
+        .action-edit { color: #FF9800; }
+        .action-delete { color: #F44336; }
+        .action-system { color: #9C27B0; }
+        .detail-cell { font-size: 0.85rem; color: #aaa; white-space: normal; max-width: 300px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>ระบบ ERP</h2>
+            <span>ระดับจัดการ</span><br>
+        </div>
+
+        <nav class="menu">
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/">Dashboard</a>
+            <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/add_sale">เพิ่มออเดอร์</a>
+            <% } %>
+            <% if (!user || !user.role || user.role === 'admin' || user.role === 'sales') { %>
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/sale_pr">เสนอขาย</a>
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/sale_so">Sale SO</a>
+            <% } %>
+            <% if (!user || !user.role || user.role === 'admin' || user.role === 'procurement') { %>
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/precher_pr">เสนอซื้อ</a>
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/purchase_order">Purchase PO</a>
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/inventory">คลังสินค้า</a>
+            <% } %>
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/ai_chat"> AI Assistant</a>
+            
+            <% if (user && user.role === 'admin') { %>
+            <hr style="border-color: #333; margin: 10px 0;">
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/audit" class="active"><i class="fas fa-history"></i> ประวัติใช้งาน</a>
+            <% } %>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
+                <br><small style="color: #ff7eb3; font-size: 0.75rem;">Role: <%= (typeof user !=='undefined' && user && user.role) ? user.role.toUpperCase() : 'USER' %></small>
+            </div>
+            <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+            </a>
+        </div>
+    </aside>
+
+    <main>
+        <h1><i class="fas fa-shield-alt"></i> ประวัติการใช้งานระบบ (Audit Log)</h1>
+        
+        <div class="summary-cards" style="margin-bottom: 20px;">
+            <div class="stat-card" style="width: 300px;">
+                <div class="stat-icon" style="background: rgba(255, 126, 179, 0.2); color: #ff7eb3;">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div>
+                    <div class="stat-label">บันทึกทั้งหมด</div>
+                    <div class="stat-value"><%= logs ? logs.length : 0 %> รายการ</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="audit-table">
+                <thead>
+                    <tr>
+                        <th width="150">วันเวลา</th>
+                        <th width="120">ผู้ใช้งาน</th>
+                        <th width="80">สิทธิ์</th>
+                        <th width="120">การกระทำ</th>
+                        <th>รายละเอียด</th>
+                        <th width="120">IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (logs && logs.length > 0) { %>
+                        <% logs.forEach(log => { 
+                            let dateStr = new Date(log.timestamp).toLocaleString('th-TH');
+                            let actionClass = 'action-system';
+                            if (log.action.includes('Login')) actionClass = 'action-login';
+                            else if (log.action.includes('Create') || log.action.includes('Add')) actionClass = 'action-create';
+                            else if (log.action.includes('Update') || log.action.includes('Edit')) actionClass = 'action-edit';
+                            else if (log.action.includes('Delete')) actionClass = 'action-delete';
+                        %>
+                        <tr>
+                            <td style="font-size: 0.85rem;"><%= dateStr %></td>
+                            <td><%= log.user %></td>
+                            <td><span class="status-badge"><%= log.role %></span></td>
+                            <td class="log-action <%= actionClass %>"><%= log.action %></td>
+                            <td class="detail-cell"><%= log.details %></td>
+                            <td style="font-size: 0.85rem;"><%= log.ip %></td>
+                        </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr><td colspan="6" style="text-align:center;">ไม่มีข้อมูลประวัติการใช้งาน</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </main>
+    <script src="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/dynamic_favicon.js"></script>
+</body>
+</html>

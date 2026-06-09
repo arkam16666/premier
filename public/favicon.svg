@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7eb3" />
+      <stop offset="100%" stop-color="#a786ff" />
+    </linearGradient>
+  </defs>
+  <!-- Enterprise / Building Icon -->
+  <path fill="url(#grad)" d="M320 32H192c-17.7 0-32 14.3-32 32v416h192V64c0-17.7-14.3-32-32-32zm-64 352h-32v-32h32v32zm0-64h-32v-32h32v32zm0-64h-32v-32h32v32zm0-64h-32v-32h32v32zm160-32h-64v288h64c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32zm-32 192h-32v-32h32v32zm0-64h-32v-32h32v32zM96 128H32c-17.7 0-32 14.3-32 32v288c0 17.7 14.3 32 32 32h64V128zm-32 192H32v-32h32v32zm0-64H32v-32h32v32z"/>
+</svg>

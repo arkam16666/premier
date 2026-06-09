@@ -2,7 +2,7 @@ const express = require('express');
 
 module.exports = (dependencies) => {
     const router = express.Router();
-    const { getsheet } = dependencies;
+    const { getsheet, logAction } = dependencies;
 
     // Login Routes
     router.get('/login', (req, res) => {
@@ -18,7 +18,15 @@ module.exports = (dependencies) => {
             const user = employees.find(e => e['ชื่อภาษาอังกฤษpic'] === username && e['password'] === password);
             
             if (user) {
+                // Assign role based on department
+                const dept = (user['แผนก'] || '').toString().trim().toLowerCase();
+                if (dept === 'admin') user.role = 'admin';
+                else if (dept.includes('sales')) user.role = 'sales';
+                else if (dept.includes('procurement')) user.role = 'procurement';
+                else user.role = 'user';
+
                 req.session.user = user;
+                if (logAction) logAction(user, 'Login Success', `Logged in from IP: ${ip}`, ip);
                 console.log(`[LOGIN SUCCESS] User: ${user['ชื่อภาษาอังกฤษpic']} (${user['ชื่อpic']}) | IP: ${ip} | Time: ${new Date().toLocaleString('th-TH')}`);
                 return res.redirect('/');
             } else {

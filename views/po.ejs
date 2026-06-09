@@ -14,6 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <title>Purchase Order (PO) - ERP System</title>
+  <link rel="icon" href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/favicon.svg" type="image/svg+xml">
 </head>
 
 <body>
@@ -26,19 +27,32 @@
 
     <nav class="menu">
       <a href="<%= baseUrl %>/">Dashboard</a>
+      <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
       <a href="<%= baseUrl %>/add_sale">เพิ่มออเดอร์</a>
+      <% } %>
+      <% if (!user || !user.role || user.role === 'admin' || user.role === 'sales') { %>
       <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
       <a href="<%= baseUrl %>/sale_so">Sale SO</a>
+      <% } %>
+      <% if (!user || !user.role || user.role === 'admin' || user.role === 'procurement') { %>
       <a href="<%= baseUrl %>/precher_pr">เสนอซื้อ</a>
       <a href="<%= baseUrl %>/purchase_order" class="active">Purchase PO</a>
+      <% } %>
+      <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
       <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
+      <% } %>
       <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
+            <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
+            <hr style="border-color: #333; margin: 10px 0;">
+            <a href="<%= baseUrl %>/audit"><i class="fas fa-history"></i> ประวัติใช้งาน</a>
+            <% } %>
     </nav>
 
     <div class="sidebar-footer">
       <div class="user-info">
         <i class="fas fa-user-circle"></i>
         <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
+        <br><small style="color: #ff7eb3; font-size: 0.75rem;">Role: <%= (typeof user !=='undefined' && user && user.role) ? user.role.toUpperCase() : 'USER' %></small>
       </div>
       <a href="<%= baseUrl %>/logout" class="btn-logout">
         <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
@@ -102,17 +116,16 @@
                     <%= val %>
                   </td>
                   <% }) %>
-
                     <td style="text-align: center;">
-                      <a href="/edit_po?id=<%= row['id'] %>" class="action-btn edit-btn" title="แก้ไข">
-                        <i class="fas fa-edit"></i>
-                      </a>
-                    </td>
+<a href="/edit_po?id=<%= row['id'] %>" class="action-btn edit-btn" title="แก้ไข">
+                          <i class="fas fa-edit"></i>
+                        </a>
+                      </td>
                     <td style="text-align: center;">
-                      <a href="javascript:void(0);" onclick="deleteItem(this, '<%= row['id'] %>')" class="action-btn delete-btn" title="ลบ">
-                        <i class="fa-solid fa-trash"></i>
-                      </a>
-                    </td>
+<a href="javascript:void(0);" onclick="deleteItem(this, '<%= row['id'] %>')" class="action-btn delete-btn" title="ลบ">
+                          <i class="fa-solid fa-trash"></i>
+                        </a>
+                      </td>
               </tr>
               <% }) } else { %>
                 <tr>
@@ -199,6 +212,7 @@
   </script>
 
 
+    <script src="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/dynamic_favicon.js"></script>
 </body>
 
 </html>

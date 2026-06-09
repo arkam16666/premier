@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>เพิ่มออเดอร์ใหม่</title>
+  <link rel="icon" href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/favicon.svg" type="image/svg+xml">
 </head>
 
 <body class="add-sale-page">
@@ -25,18 +26,31 @@
 
         <nav class="menu">
             <a href="<%= baseUrl %>/">Dashboard</a>
-            <a href="<%= baseUrl %>/add_sale" class="active">เพิ่มออเดอร์</a>
-            <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
+            <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
+      <a href="<%= baseUrl %>/add_sale" class="active">เพิ่มออเดอร์</a>
+      <% } %>
+      <% if (!user || !user.role || user.role === 'admin' || user.role === 'sales') { %>
+      <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
             <a href="<%= baseUrl %>/sale_so">Sale SO</a>
-            <a href="<%= baseUrl %>/precher_pr">เสนอซื้อ</a>
+      <% } %>
+            <% if (!user || !user.role || user.role === 'admin' || user.role === 'procurement') { %>
+      <a href="<%= baseUrl %>/precher_pr">เสนอซื้อ</a>
             <a href="<%= baseUrl %>/purchase_order">Purchase PO</a>
-            <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>            <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
+            <% } %>
+      <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
+      <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
+      <% } %>            <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
+            <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
+            <hr style="border-color: #333; margin: 10px 0;">
+            <a href="<%= baseUrl %>/audit"><i class="fas fa-history"></i> ประวัติใช้งาน</a>
+            <% } %>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
-                <i class="fas fa-user-circle"></i>
-                <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
-            </div>
+        <i class="fas fa-user-circle"></i>
+        <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
+        <br><small style="color: #ff7eb3; font-size: 0.75rem;">Role: <%= (typeof user !=='undefined' && user && user.role) ? user.role.toUpperCase() : 'USER' %></small>
+      </div>
             <a href="<%= baseUrl %>/logout" class="btn-logout">
                 <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
             </a>
@@ -61,8 +75,9 @@
                 <div class="input-section">
                     <h3 class="section-label">เลือกประเภทรายการ</h3>
                     <div class="selection-grid">
+                        <% if (!user || !user.role || user.role === 'admin' || user.role === 'sales') { %>
                         <label class="select-card">
-                            <input type="radio" name="orderType" value="sale" checked>
+                            <input type="radio" name="orderType" value="sale" <%= (user && user.role === 'sales') ? 'checked' : 'checked' %>>
                             <div class="card-body">
                                 <div class="icon-box sale">
                                     <i class="fas fa-file-invoice-dollar"></i>
@@ -73,9 +88,11 @@
                                 <div class="radio-indicator"></div>
                             </div>
                         </label>
+                        <% } %>
 
+                        <% if (!user || !user.role || user.role === 'admin' || user.role === 'procurement') { %>
                         <label class="select-card">
-                            <input type="radio" name="orderType" value="purchase">
+                            <input type="radio" name="orderType" value="purchase" <%= (user && user.role === 'procurement') ? 'checked' : '' %>>
                             <div class="card-body">
                                 <div class="icon-box purchase">
                                     <i class="fas fa-cart-arrow-down"></i>
@@ -86,6 +103,7 @@
                                 <div class="radio-indicator"></div>
                             </div>
                         </label>
+                        <% } %>
                     </div>
                 </div>
 
@@ -103,9 +121,15 @@
                 </div>
 
                 <div class="action-footer">
-                    <a href="<%= baseUrl %>/sale_pr" class="btn-back">
-                        <i class="fas fa-chevron-left"></i> กลับไปหน้าเสนอขาย
-                    </a>
+                    <% if (user && user.role === 'procurement') { %>
+                        <a href="<%= baseUrl %>/precher_pr" class="btn-back">
+                            <i class="fas fa-chevron-left"></i> กลับไปหน้าเสนอซื้อ
+                        </a>
+                    <% } else { %>
+                        <a href="<%= baseUrl %>/sale_pr" class="btn-back">
+                            <i class="fas fa-chevron-left"></i> กลับไปหน้าเสนอขาย
+                        </a>
+                    <% } %>
                     <button type="submit" class="btn-submit-premium" id="submitBtn">
                         <span>ยืนยันข้อมูลรายการ</span>
                         <i class="fas fa-arrow-right"></i>
@@ -183,6 +207,7 @@
         }
     });
 </script>
+    <script src="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/dynamic_favicon.js"></script>
 </body>
 
 </html>
