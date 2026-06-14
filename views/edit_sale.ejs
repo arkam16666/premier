@@ -126,6 +126,7 @@
                         </table>
                     </div>
 
+                    <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #fff;">รายการสินค้า (สินค้าใหม่)</h3>
                     <form action="/edit_sale" method="GET" class="search-form">
                         <input type="hidden" name="id" value="<%= idToEdit %>">
                         <div class="search-input-group">
@@ -157,8 +158,8 @@
                                 </tr>
                             </thead>
                             <tbody id="salePrBody">
-                                <% if (sale_pr && sale_pr.length> 0) { %>
-                                    <% sale_pr.forEach(row=> { %>
+                                <% if (sale_pr && sale_pr.length > 0) { %>
+                                    <% sale_pr.forEach(row => { %>
                                         <tr class="item-row" data-product="<%= row['สินค้า'] %>">
                                             <td class="text-center">
                                                 <input type="checkbox" class="item-checkbox">
@@ -174,11 +175,35 @@
                                             <td class="text-right"><%= row['จำนวนเงิน'] %></td>
                                             <td class="text-right"><%= row['ภาษี'] %></td>
                                         </tr>
-                                    <% }) } else { %>
-                                        <tr>
-                                            <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                                    <% }) %>
+                                <% } %>
+
+                                <!-- Render new_Product data -->
+                                <% if (typeof newProductData !== 'undefined' && newProductData && newProductData.length > 0) { %>
+                                    <% newProductData.forEach(row => { %>
+                                        <tr class="item-row new-product-row" data-product="<%= row['สินค้า'] %>" style="background: rgba(255, 126, 179, 0.05);">
+                                            <td class="text-center">
+                                                <input type="checkbox" class="item-checkbox">
+                                            </td>
+                                            <td><%= row['สินค้า'] %> <span class="badge" style="font-size: 0.6rem; background: #ff7eb3; color: #fff; padding: 2px 4px; border-radius: 4px;">ใหม่</span></td>
+                                            <td><%= row['ชื่อสินค้า'] %></td>
+                                            <td><%= row['ข้อมูลจำเพราะ'] %></td>
+                                            <td class="text-center">
+                                                <input type="number" class="item-qty" min="0" step="any" value="<%= row['จำนวน'] %>">
+                                            </td>
+                                            <td><%= row['หน่วย'] %></td>
+                                            <td class="text-right"><%= row['ราคาต่อหน่วย'] %></td>
+                                            <td class="text-right"><%= row['จำนวนเงิน'] %></td>
+                                            <td class="text-right"><%= row['ภาษี'] %></td>
                                         </tr>
-                                    <% } %>
+                                    <% }) %>
+                                <% } %>
+
+                                <% if ((!sale_pr || sale_pr.length === 0) && (!newProductData || newProductData.length === 0)) { %>
+                                    <tr>
+                                        <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                                    </tr>
+                                <% } %>
                             </tbody>
                         </table>
                     </div>

@@ -197,7 +197,6 @@ function addSelectedProducts() {
                         <td class="text-right">${price.toLocaleString()}</td>
                         <td class="text-right">${amount.toLocaleString()}</td>
                         <td class="text-right">${tax.toLocaleString()}</td>
-                        <td class="item-total text-right">${total.toLocaleString()}</td>
                     `;
                     
                     tableBody.appendChild(newRow);

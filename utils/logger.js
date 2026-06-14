@@ -4,6 +4,10 @@ const path = require('path');
 const logFile = path.join(process.cwd(), 'logs', 'audit.json');
 
 // Initialize log file if not exists
+const logDir = path.dirname(logFile);
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+}
 if (!fs.existsSync(logFile)) {
     fs.writeFileSync(logFile, JSON.stringify([]));
 }

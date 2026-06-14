@@ -186,20 +186,49 @@ module.exports = (dependencies) => {
         const idToEdit = req.query.id;
         const searchQuery = (req.query.search || "").trim().toLowerCase();
         try {
-            const [subSalesData, salesData, allProductsRaw, employees] = await Promise.all([
+            // Force cache clear for debug
+            sheetCache.delete("new_Product_all");
+
+            const [subSalesData, salesData, allProductsRaw, employees, newProductRawAll] = await Promise.all([
                 getsheet(idToEdit, "sub_sales_pr"),
                 getsheet(idToEdit, "Sale_pr"),
                 getsheet(null, "product"),
-                getsheet(null, "empolyee")
+                getsheet(null, "empolyee"),
+                getsheet(null, "new_Product") // Fetch all rows to bypass header issues
             ]);
+
+            // Filter using the correct foreign key column 'sale_pr_id'
+            const newProductRaw = newProductRawAll.filter(row => {
+                return String(row['sale_pr_id'] || '').trim() === String(idToEdit).trim();
+            });
 
             const saleHeaders = ["id", "วันที่", "PIC", "ลูกค้า-ผู้ขาย", "โทรศัพท์", "สถานะเอกสาร"];
             const subSaleHeaders = ["id", "สินค้า", "ชื่อสินค้า", "ข้อมูลจำเพราะ", "จำนวน", "หน่วย", "ราคาต่อหน่วย", "จำนวนเงิน", "ภาษี"];
             const productHeaders = ["รหัส", "ชื่อ", "ชื่อจำเพราะ", "หน่วย", "ราคาขาย", "แบรนด์", "อัตราภาษีขาย"];
+            
+            // Map the specific new_Product columns to match the UI table expectations
+            const newProductData = newProductRaw.map(row => {
+                const price = parseFloat(row['ราคา']) || 0;
+                const qty = parseFloat(row['จำกัดจำนวน']) || 1; // Default to 1 if not specified
+                const amount = price * qty;
+                
+                return {
+                    'สินค้า': row['id'] || '',               // Use id as SKU
+                    'ชื่อสินค้า': row['ชื่อ'] || '',           // Map ชื่อ to ชื่อสินค้า
+                    'ข้อมูลจำเพราะ': row['ประเภทสินค้า'] || '', // Map ประเภทสินค้า to ข้อมูลจำเพราะ
+                    'จำนวน': qty,                          // Map จำกัดจำนวน to จำนวน
+                    'หน่วย': row['กลุ่มสินค้า'] || '',         // Use กลุ่มสินค้า as unit for now
+                    'ราคาต่อหน่วย': price,                    // Map ราคา to ราคาต่อหน่วย
+                    'จำนวนเงิน': amount,
+                    'ภาษี': 0                                // Assume 0 tax for now unless specified
+                };
+            });
 
             let salePrData = mapDataByHeaders(subSalesData, subSaleHeaders);
             let orderData = mapDataByHeaders(salesData, saleHeaders);
             let allProducts = mapDataByHeaders(allProductsRaw, productHeaders);
+            
+            console.log(`[DEBUG] Mapped newProductData:`, newProductData);
 
             // Find full employee info for the PIC (use trim to handle whitespace/tabs)
             let picInfo = {};
@@ -220,6 +249,7 @@ module.exports = (dependencies) => {
                 order: orderData,
                 rawSalesData: salesData,
                 allProducts: allProducts,
+                newProductData: newProductData,
                 picInfo: picInfo, // Pass full employee info
                 search: req.query.search || "",
                 idToEdit: idToEdit
