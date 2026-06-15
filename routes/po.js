@@ -165,9 +165,9 @@ module.exports = (dependencies) => {
             let grandTotal = 0;
             if (finalItems && finalItems.length > 0) {
                 const values = finalItems.map(p => {
-                    const qty = parseFloat(p.quantity) || 0;
-                    const price = parseFloat(p['ราคาซื้อ']) || 0;
-                    const taxRate = parseFloat((p['อัตราภาษีซื้อ'] || "0").toString().replace('%', '')) || 0;
+                    const qty = Math.max(0, parseFloat(p.quantity) || 0);
+                    const price = Math.max(0, parseFloat(p['ราคาซื้อ']) || 0);
+                    const taxRate = Math.max(0, parseFloat((p['อัตราภาษีซื้อ'] || "0").toString().replace('%', '')) || 0);
                     const amount = qty * price;
                     const tax = amount * (taxRate / 100);
                     const total = amount + tax;

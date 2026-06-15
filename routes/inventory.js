@@ -48,6 +48,12 @@ module.exports = (dependencies) => {
         const { id, updatedData } = req.body;
         if (!id || !updatedData) return res.status(400).json({ error: "ต้องระบุ id และข้อมูลที่ต้องการอัปเดต" });
 
+        // Validate: ราคาต้องไม่ติดลบ
+        const cost = parseFloat(updatedData['ราคาซื้อ']);
+        const price = parseFloat(updatedData['ราคาขาย']);
+        if (!isNaN(cost) && cost < 0) return res.status(400).json({ error: "ราคาซื้อต้องไม่ต่ำกว่า 0" });
+        if (!isNaN(price) && price < 0) return res.status(400).json({ error: "ราคาขายต้องไม่ต่ำกว่า 0" });
+
         try {
             const sheetName = "product";
             const result = await dependencies.sheetsWrite.spreadsheets.values.get({

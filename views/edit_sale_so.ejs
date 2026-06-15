@@ -292,6 +292,8 @@
                     if (productInfo) {
                         finalItems.push({
                             ...productInfo,
+                            'ราคาขาย': Math.max(0, parseFloat(productInfo['ราคาขาย']) || 0),
+                            'อัตราภาษีขาย': Math.max(0, parseFloat((productInfo['อัตราภาษีขาย'] || '0').toString().replace('%', '')) || 0),
                             quantity: qty
                         });
                     }

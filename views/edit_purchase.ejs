@@ -274,6 +274,8 @@
                     if (productInfo) {
                         finalItems.push({
                             ...productInfo,
+                            'ราคาซื้อ': Math.max(0, parseFloat(productInfo['ราคาซื้อ']) || 0),
+                            'อัตราภาษีซื้อ': Math.max(0, parseFloat((productInfo['อัตราภาษีซื้อ'] || '0').toString().replace('%', '')) || 0),
                             quantity: qty
                         });
                     }

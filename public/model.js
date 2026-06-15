@@ -91,17 +91,17 @@ function recalculateTotals() {
 
         var productInfo = allProducts.find(p => p['รหัส'] === productCode);
         if (productInfo) {
-            var price = parseFloat(productInfo['ราคาขาย']) || 0;
+            var price = Math.max(0, parseFloat(productInfo['ราคาขาย']) || 0);
             var amount = price * qty;
             var taxRateStr = (productInfo['อัตราภาษีขาย'] || "0").toString().replace('%', '');
-            var taxRate = parseFloat(taxRateStr) || 0;
+            var taxRate = Math.max(0, parseFloat(taxRateStr) || 0);
             var tax = amount * (taxRate / 100);
             var total = amount + tax;
 
             // Update row cells
-            row.cells[7].textContent = amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            row.cells[8].textContent = tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            row.cells[9].textContent = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (row.cells[7]) row.cells[7].textContent = amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (row.cells[8]) row.cells[8].textContent = tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (row.cells[9]) row.cells[9].textContent = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             
             grandTotal += total;
         }
@@ -124,7 +124,7 @@ document.addEventListener('input', function(e) {
 
 // คำนวณยอดรวมเมื่อโหลดหน้าเว็บเสร็จ
 document.addEventListener('DOMContentLoaded', function() {
-    recalculateTotals();
+    setTimeout(recalculateTotals, 100); // Small delay to ensure table is rendered
 });
 
 // ไฮไลท์แถวเมื่อเลือก checkbox
@@ -176,10 +176,10 @@ function addSelectedProducts() {
                     newRow.className = 'item-row pending-add';
                     newRow.setAttribute('data-product', productCode);
                     
-                    var price = parseFloat(fullProduct['ราคาขาย']) || 0;
+                    var price = Math.max(0, parseFloat(fullProduct['ราคาขาย']) || 0);
                     var amount = price * qtyToAdd;
                     var taxRateStr = (fullProduct['อัตราภาษีขาย'] || "0").toString().replace('%', '');
-                    var taxRate = parseFloat(taxRateStr) || 0;
+                    var taxRate = Math.max(0, parseFloat(taxRateStr) || 0);
                     var tax = amount * (taxRate / 100);
                     var total = amount + tax;
 
@@ -194,9 +194,10 @@ function addSelectedProducts() {
                             <input type="number" class="item-qty" min="0" step="any" value="${qtyToAdd}">
                         </td>
                         <td>${fullProduct['หน่วย'] || ''}</td>
-                        <td class="text-right">${price.toLocaleString()}</td>
-                        <td class="text-right">${amount.toLocaleString()}</td>
-                        <td class="text-right">${tax.toLocaleString()}</td>
+                        <td class="text-right">${price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="text-right">${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="text-right">${tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="text-right">${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     `;
                     
                     tableBody.appendChild(newRow);
@@ -211,6 +212,7 @@ function addSelectedProducts() {
         return;
     }
 
+    recalculateTotals();
     updateSelectedCount();
     closeModal();
 }

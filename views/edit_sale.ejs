@@ -75,10 +75,21 @@
                           <div>
                             <div class="stat-label">จำนวนรายการสินค้า</div>
                             <div id="summaryItemCount" class="stat-value">
-                              <%= sale_pr ? sale_pr.length : 0 %> รายการ
+                              <%= (sale_pr ? sale_pr.length : 0) + (typeof newProductData !== 'undefined' ? newProductData.length : 0) %> รายการ
                             </div>
                           </div>
                         </div>
+                        <div class="stat-card stat-card-custom">
+                            <div class="stat-icon stat-icon-custom" style="background: rgba(255, 126, 179, 0.2); color: #ff7eb3;">
+                              <i class="fas fa-coins"></i>
+                            </div>
+                            <div>
+                              <div class="stat-label">ยอดรวมสุทธิ</div>
+                              <div id="summaryGrandTotal" class="stat-value">
+                                ฿0.00
+                              </div>
+                            </div>
+                          </div>
                     </div>
 
                     <div class="table-responsive table-responsive-container">
@@ -155,6 +166,7 @@
                                     <th class="text-right">ราคาต่อหน่วย</th>
                                     <th class="text-right">จำนวนเงิน</th>
                                     <th class="text-right">ภาษี</th>
+                                    <th class="text-right">ยอดรวม</th>
                                 </tr>
                             </thead>
                             <tbody id="salePrBody">
@@ -171,9 +183,10 @@
                                                 <input type="number" class="item-qty" min="0" step="any" value="<%= row['จำนวน'] %>">
                                             </td>
                                             <td><%= row['หน่วย'] %></td>
-                                            <td class="text-right"><%= row['ราคาต่อหน่วย'] %></td>
-                                            <td class="text-right"><%= row['จำนวนเงิน'] %></td>
-                                            <td class="text-right"><%= row['ภาษี'] %></td>
+                                            <td class="text-right"><%= Number(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(String(row['ภาษี'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(String(row['ยอดรวม'] || (parseFloat(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')) + parseFloat(String(row['ภาษี'] || 0).replace(/,/g, ''))) || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                         </tr>
                                     <% }) %>
                                 <% } %>
@@ -192,9 +205,10 @@
                                                 <input type="number" class="item-qty" min="0" step="any" value="<%= row['จำนวน'] %>">
                                             </td>
                                             <td><%= row['หน่วย'] %></td>
-                                            <td class="text-right"><%= row['ราคาต่อหน่วย'] %></td>
-                                            <td class="text-right"><%= row['จำนวนเงิน'] %></td>
-                                            <td class="text-right"><%= row['ภาษี'] %></td>
+                                            <td class="text-right"><%= Number(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(String(row['ภาษี'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(String(row['ยอดรวม'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                         </tr>
                                     <% }) %>
                                 <% } %>
@@ -218,6 +232,24 @@
                             <script>
                                 // ข้อมูลพื้นฐานที่จำเป็นสำหรับ Modal และการบันทึก
                                 var allProducts = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(allProducts || [])) %>'));
+                                var newProductData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(newProductData || [])) %>'));
+                                
+                                // Merge new products into allProducts for recalculateTotals
+                                if (newProductData && newProductData.length > 0) {
+                                    newProductData.forEach(np => {
+                                        if (!allProducts.find(p => p['รหัส'] === np['สินค้า'])) {
+                                            allProducts.push({
+                                                'รหัส': np['สินค้า'],
+                                                'ชื่อ': np['ชื่อสินค้า'],
+                                                'ชื่อจำเพราะ': np['ข้อมูลจำเพราะ'],
+                                                'หน่วย': np['หน่วย'],
+                                                'ราคาขาย': np['ราคาต่อหน่วย'],
+                                                'อัตราภาษีขาย': '7%'
+                                            });
+                                        }
+                                    });
+                                }
+
                                 var rawSubSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
                                 var rawOrderData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(order || [])) %>'));
                                 var rawSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawSalesData || [])) %>'));
@@ -296,6 +328,8 @@
                     if (productInfo) {
                         finalItems.push({
                             ...productInfo,
+                            'ราคาขาย': Math.max(0, parseFloat(productInfo['ราคาขาย']) || 0),
+                            'อัตราภาษีขาย': Math.max(0, parseFloat((productInfo['อัตราภาษีขาย'] || '0').toString().replace('%', '')) || 0),
                             quantity: qty
                         });
                     }
@@ -381,34 +415,46 @@
         async function printPDF() {
             const rows = document.querySelectorAll('#salePrBody .item-row');
             
-            const itemsArray = [];
-            let itemCount = 0;
+            const itemsObject = {};
+            let hasItems = false;
+            let totalAmount = 0; 
+            let totalVat = 0;
+            let grandTotal = 0;
 
             rows.forEach(row => {
                 if (row.style.display !== 'none') {
                     const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
                     if (qty > 0) {
-                        itemCount++;
-                        const sku = row.cells[1].innerText.trim();
+                        hasItems = true;
+                        const sku = row.cells[1].innerText.trim().replace(' ใหม่', '');
                         const productName = row.cells[2].innerText.trim();
+                        const detail = row.cells[3].innerText.trim();
+                        const unit = row.cells[5].innerText.trim();
                         const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
-                        const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
-                        const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                        const vat = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
+                        const total = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                        const amount = total - vat; // Calculate amount since column is removed
                         
-                        const itemObj = {};
-                        itemObj[`item${itemCount}`] = {
+                        itemsObject[sku] = {
                             'sku': sku,
                             'productName': productName,
-                            'qty': qty.toString(),
-                            'unitPrice': unitPrice.toFixed(2),
-                            'total': (amount + vat).toFixed(2)
+                            'qty': qty,
+                            'unitPrice': Number(unitPrice.toFixed(2)),
+                            'total': Number(amount.toFixed(2)),
+                            'unit': unit,
+                            'detail': detail,
+                            'vatbuy': Number(vat.toFixed(2)),
+                            'vatshell': 0
                         };
-                        itemsArray.push(itemObj);
+                        
+                        totalAmount += amount;
+                        totalVat += vat;
+                        grandTotal += total;
                     }
                 }
             });
 
-            if (itemsArray.length === 0) {
+            if (!hasItems) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'ไม่มีรายการสินค้า',
@@ -418,23 +464,6 @@
                 });
                 return;
             }
-
-            // คำนวณยอดรวม
-            let totalAmount = 0; 
-            let totalVat = 0;
-            let grandTotal = 0;
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-                    if (qty > 0) {
-                        const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
-                        const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                        totalAmount += amount;
-                        totalVat += vat;
-                        grandTotal += (amount + vat);
-                    }
-                }
-            });
 
             const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
             const customerName = headerData['ลูกค้า-ผู้ขาย'] || '';
@@ -473,28 +502,29 @@
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const year = d.getFullYear();
-            const formattedDate = `${day}/${month}/${year}`;
+            const formattedDate = `${year}-${month}-${day}`;
             
             const payload = {
                 id: currentEditId,
                 orderDate: formattedDate,
-                title: 'ใบเสนอราคา ',
+                title: 'ใบเสนอราคา',
                 title_eng: 'Quotation',
                 customerCode: vendorCode,
                 contactName: headerData['ผู้ติดต่อ'] || '',
                 vendorName: customerName,
                 vendorAddress: vendorAddress,
                 vendorPhone: vendorPhone,
-                approvalNo: currentEditId,
+                approvalNo: headerData['id'] || currentEditId,
                 deliveryDate: headerData['วันที่ส่งมอบ'] || '',
-                creditDays: headerData['เครดิต (วัน)'] || '',
+                creditDays: headerData['เครดิต (วัน)'] || '30',
                 paymentTerms: headerData['ประเภทธุรกรรม'] || '',
                 preparedBy: currentUser['ชื่อpic'] || headerData['PIC'] || '',
                 authorizedBy: '',
-                totalAmount: Number(totalAmount.toFixed(2)),
-                vat: Number(totalVat.toFixed(2)),
                 grandTotal: Number(grandTotal.toFixed(2)),
-                items: itemsArray
+                vat: Number(totalVat.toFixed(2)),
+                picName: currentUser['ชื่อpic'] || headerData['PIC'] || '',
+                picDepartment: currentUser['แผนก'] || 'Sales & Marketing Dept.',
+                items: [itemsObject]
             };
 
             // Show loading
@@ -510,39 +540,38 @@
             });
 
             try {
-                const response = await fetch('/api/generate-po-pdf', {
+                const response = await fetch('/api/generate-pdf-link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
                 const contentType = response.headers.get('content-type');
+                let result;
 
                 if (contentType && contentType.includes('application/json')) {
-                    const result = await response.json();
+                    result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(result.error || result.detail || 'PDF Generation API returned an error');
+                    }
                     if (result.pdf_link) {
                         window.open(result.pdf_link, '_blank');
                         Swal.close();
                         Toast.fire({ icon: 'success', title: 'เปิดดู PDF สำเร็จ' });
                     } else {
-                        throw new Error(result.error || 'ไม่สามารถสร้าง PDF ได้');
+                        throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ (API ตอบกลับมาสำเร็จแต่ไม่มี pdf_link)');
                     }
-                } else if (contentType && contentType.includes('application/pdf')) {
-                    const blob = await response.blob();
-                    const pdfUrl = URL.createObjectURL(blob);
-                    window.open(pdfUrl, '_blank');
-                    Swal.close();
-                    Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
                 } else {
                     const errorText = await response.text();
-                    throw new Error(errorText || 'PDF Generation failed');
+                    console.error("Non-JSON error from API:", errorText);
+                    throw new Error('ระบบสร้าง PDF ขัดข้อง: ' + (errorText.substring(0, 100) || 'Unknown format'));
                 }
             } catch (err) {
-                console.error('Print error:', err);
+                console.error('Print error detailed:', err);
                 Swal.fire({
                     icon: 'error',
-                    title: 'เกิดข้อผิดพลาด',
-                    text: 'ไม่สามารถสร้าง PDF ได้: ' + err.message,
+                    title: 'เกิดข้อผิดพลาดในการพิมพ์',
+                    text: err.message,
                     background: '#1d112e',
                     color: '#fff'
                 });

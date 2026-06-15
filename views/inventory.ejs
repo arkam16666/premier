@@ -186,11 +186,11 @@
                     <div class="section-title"><i class="fas fa-money-bill-wave"></i> ราคาและภาษี</div>
                     <div class="edit-form-group">
                         <label>ราคาซื้อ (Cost)</label>
-                        <input type="number" id="edit-cost" class="edit-form-input">
+                        <input type="number" id="edit-cost" class="edit-form-input" min="0" step="any">
                     </div>
                     <div class="edit-form-group">
                         <label>ราคาขาย (Price)</label>
-                        <input type="number" id="edit-price" class="edit-form-input">
+                        <input type="number" id="edit-price" class="edit-form-input" min="0" step="any">
                     </div>
                     <div class="edit-form-group">
                         <label>อัตราภาษีซื้อ</label>
@@ -279,6 +279,21 @@
 
         async function saveProductChanges() {
             const id = document.getElementById('edit-id').value;
+
+            // Validate: ราคาต้องไม่ติดลบ
+            const costVal = parseFloat(document.getElementById('edit-cost').value);
+            const priceVal = parseFloat(document.getElementById('edit-price').value);
+            if (costVal < 0 || priceVal < 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ข้อมูลไม่ถูกต้อง',
+                    text: 'ราคาซื้อและราคาขายต้องไม่ต่ำกว่า 0 กรุณาตรวจสอบข้อมูลอีกครั้ง',
+                    background: '#1d112e',
+                    color: '#fff'
+                });
+                return;
+            }
+
             const updatedData = {
                 'ชื่อ': document.getElementById('edit-name').value,
                 'ชื่อจำเพราะ': document.getElementById('edit-spec').value,

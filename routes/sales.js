@@ -208,19 +208,41 @@ module.exports = (dependencies) => {
             
             // Map the specific new_Product columns to match the UI table expectations
             const newProductData = newProductRaw.map(row => {
-                const price = parseFloat(row['ราคา']) || 0;
-                const qty = parseFloat(row['จำกัดจำนวน']) || 1; // Default to 1 if not specified
-                const amount = price * qty;
+                const qty = parseFloat(row['จำกัดจำนวน'] || row['จำนวน'] || 1) || 1;
+                let unitPrice = parseFloat(row['ราคาต่อหน่วย'] || 0); // Assume pre-tax
+                let totalWithVat = parseFloat(row['ราคา'] || 0); // This is TOTAL including VAT
+
+                let amount, tax, total;
+
+                if (totalWithVat > 0) {
+                    // Case 1: The 'ราคา' (total w/ VAT) column is the source of truth.
+                    total = Math.max(0, totalWithVat);
+                    amount = total / 1.07; // Calculate pre-tax amount
+                    tax = total - amount;      // Calculate tax from the difference
+                    unitPrice = (qty > 0) ? (amount / qty) : 0; // Calculate pre-tax unit price
+                } else if (unitPrice > 0) {
+                    // Case 2: Only 'ราคาต่อหน่วย' (pre-tax unit price) is provided.
+                    amount = Math.max(0, unitPrice) * qty;
+                    tax = amount * 0.07;
+                    total = amount + tax;
+                } else {
+                    // Case 3: No price info, default to 0.
+                    amount = 0;
+                    tax = 0;
+                    total = 0;
+                    unitPrice = 0;
+                }
                 
                 return {
-                    'สินค้า': row['id'] || '',               // Use id as SKU
+                    'สินค้า': row['รหัส'] || row['id'] || '',               // Use id as SKU
                     'ชื่อสินค้า': row['ชื่อ'] || '',           // Map ชื่อ to ชื่อสินค้า
-                    'ข้อมูลจำเพราะ': row['ประเภทสินค้า'] || '', // Map ประเภทสินค้า to ข้อมูลจำเพราะ
+                    'ข้อมูลจำเพราะ': row['ชื่อจำเพราะ'] || row['ประเภทสินค้า'] || '', // Map ประเภทสินค้า to ข้อมูลจำเพราะ
                     'จำนวน': qty,                          // Map จำกัดจำนวน to จำนวน
-                    'หน่วย': row['กลุ่มสินค้า'] || '',         // Use กลุ่มสินค้า as unit for now
-                    'ราคาต่อหน่วย': price,                    // Map ราคา to ราคาต่อหน่วย
-                    'จำนวนเงิน': amount,
-                    'ภาษี': 0                                // Assume 0 tax for now unless specified
+                    'หน่วย': row['หน่วย'] || row['กลุ่มสินค้า'] || '',         // Useกลุ่มสินค้า as unit
+                    'ราคาต่อหน่วย': unitPrice,                // Pre-tax unit price
+                    'จำนวนเงิน': amount,                   // Pre-tax total amount
+                    'ภาษี': tax,                             // VAT 7%
+                    'ยอดรวม': total                         // Grand Total (pre-tax + tax)
                 };
             });
 
@@ -452,9 +474,9 @@ module.exports = (dependencies) => {
 
             if (finalItems && finalItems.length > 0) {
                 const values = finalItems.map(p => {
-                    const qty = parseFloat(p.quantity) || 0;
-                    const price = parseFloat(p['ราคาขาย']) || 0;
-                    const taxRate = parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0;
+                    const qty = Math.max(0, parseFloat(p.quantity) || 0);
+                    const price = Math.max(0, parseFloat(p['ราคาขาย']) || 0);
+                    const taxRate = Math.max(0, parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0);
                     const amount = qty * price;
                     const tax = amount * (taxRate / 100);
                     return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, amount + tax];
@@ -518,9 +540,9 @@ module.exports = (dependencies) => {
             let grandTotal = 0;
             if (finalItems && finalItems.length > 0) {
                 const values = finalItems.map(p => {
-                    const qty = parseFloat(p.quantity) || 0;
-                    const price = parseFloat(p['ราคาขาย']) || 0;
-                    const taxRate = parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0;
+                    const qty = Math.max(0, parseFloat(p.quantity) || 0);
+                    const price = Math.max(0, parseFloat(p['ราคาขาย']) || 0);
+                    const taxRate = Math.max(0, parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0);
                     const amount = qty * price;
                     const tax = amount * (taxRate / 100);
                     const total = amount + tax;
@@ -689,9 +711,9 @@ module.exports = (dependencies) => {
         try {
             const sheetName = "sub_sales_pr";
             const values = products.map(p => {
-                const qty = parseFloat(p.quantity) || 0;
-                const price = parseFloat(p['ราคาขาย']) || 0;
-                const taxRate = parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0;
+                const qty = Math.max(0, parseFloat(p.quantity) || 0);
+                const price = Math.max(0, parseFloat(p['ราคาขาย']) || 0);
+                const taxRate = Math.max(0, parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0);
                 const amount = qty * price;
                 const tax = amount * (taxRate / 100);
                 return [id, p.รหัส || "", p.ชื่อ || "", p.ชื่อจำเพราะ || "", qty, p.หน่วย || "", price, amount, tax, amount + tax];

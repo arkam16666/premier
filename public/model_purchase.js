@@ -91,10 +91,10 @@ function recalculateTotals() {
 
         var productInfo = allProducts.find(p => p['รหัส'] === productCode);
         if (productInfo) {
-            var price = parseFloat(productInfo['ราคาซื้อ']) || 0;
+            var price = Math.max(0, parseFloat(productInfo['ราคาซื้อ']) || 0);
             var amount = price * qty;
             var taxRateStr = (productInfo['อัตราภาษีซื้อ'] || "0").toString().replace('%', '');
-            var taxRate = parseFloat(taxRateStr) || 0;
+            var taxRate = Math.max(0, parseFloat(taxRateStr) || 0);
             var tax = amount * (taxRate / 100);
             var total = amount + tax;
 
@@ -176,10 +176,10 @@ function addSelectedProducts() {
                     newRow.className = 'item-row pending-add';
                     newRow.setAttribute('data-product', productCode);
                     
-                    var price = parseFloat(fullProduct['ราคาซื้อ']) || 0; // Changed from ราคาขาย
+                    var price = Math.max(0, parseFloat(fullProduct['ราคาซื้อ']) || 0); // Changed from ราคาขาย
                     var amount = price * qtyToAdd;
                     var taxRateStr = (fullProduct['อัตราภาษีซื้อ'] || "0").toString().replace('%', ''); // Changed from อัตราภาษีขาย
-                    var taxRate = parseFloat(taxRateStr) || 0;
+                    var taxRate = Math.max(0, parseFloat(taxRateStr) || 0);
                     var tax = amount * (taxRate / 100);
                     var total = amount + tax;
 
