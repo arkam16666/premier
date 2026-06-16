@@ -1,6 +1,4 @@
-* {
-    font-family: 'Kanit', sans-serif !important;
-}
+
 
 .order-form-grid {
     display: grid;
@@ -54,3 +52,4 @@
 .order-modal-panel {
     max-width: 800px;
 }
+

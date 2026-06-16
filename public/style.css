@@ -1,13 +1,13 @@
 * {
-    font-family: "Kanit", sans-serif !important;
-    font-weight: 500;
-    font-style: normal;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
 body {
+    font-family: "Kanit", sans-serif;
+    font-weight: 500;
+    font-style: normal;
     background-color: #0b0714; /* ม่วงเข้มมากๆ เกือบดำ */
     color: #e0e0e0;
     overflow-x: hidden;

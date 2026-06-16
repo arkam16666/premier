@@ -14,651 +14,708 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>แก้ไขออเดอร์</title>
-  <link rel="icon" href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/favicon.svg" type="image/svg+xml">
 </head>
 
 <body>
     <%- include('partials/sidebar') %>
-    <main class="main-content">
+        <main class="main-content">
 
-        <% if (order && order.length> 0) { %>
-            <h1>แก้ไขข้อมูลการเสนอขาย สำหรับ <%= order[0]['ลูกค้า-ผู้ขาย'] %>
-            </h1>
-            <% } else { %>
-                <h1>แก้ไขข้อมูลการเสนอขาย</h1>
-                <% } %>
+            <% if (order && order.length> 0) { %>
+                <h1>แก้ไขข้อมูลการเสนอขาย สำหรับ <%= order[0]['ลูกค้า-ผู้ขาย'] %>
+                </h1>
+                <% } else { %>
+                    <h1>แก้ไขข้อมูลการเสนอขาย</h1>
+                    <% } %>
 
-                    <!-- Summary Cards -->
-                    <div class="summary-cards summary-cards-container">
-                        <div class="stat-card stat-card-custom">
-                          <div class="stat-icon stat-icon-custom stat-icon-blue">
-                            <i class="fas fa-file-invoice"></i>
-                          </div>
-                          <div>
-                            <div class="stat-label">จำนวนรายการสินค้า</div>
-                            <div id="summaryItemCount" class="stat-value">
-                              <%= (sale_pr ? sale_pr.length : 0) + (typeof newProductData !== 'undefined' ? newProductData.length : 0) %> รายการ
+                        <!-- Summary Cards -->
+                        <div class="summary-cards summary-cards-container">
+                            <div class="stat-card stat-card-custom">
+                                <div class="stat-icon stat-icon-custom stat-icon-blue">
+                                    <i class="fas fa-file-invoice"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-label">จำนวนรายการสินค้า</div>
+                                    <div id="summaryItemCount" class="stat-value">
+                                        <%= (sale_pr ? sale_pr.length : 0) + (typeof newProductData !=='undefined' ?
+                                            newProductData.length : 0) %> รายการ
+                                    </div>
+                                </div>
                             </div>
-                          </div>
+                            <div class="stat-card stat-card-custom">
+                                <div class="stat-icon stat-icon-custom"
+                                    style="background: rgba(255, 126, 179, 0.2); color: #ff7eb3;">
+                                    <i class="fas fa-coins"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-label">ยอดรวมสุทธิ</div>
+                                    <div id="summaryGrandTotal" class="stat-value">
+                                        ฿0.00
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="stat-card stat-card-custom">
-                            <div class="stat-icon stat-icon-custom" style="background: rgba(255, 126, 179, 0.2); color: #ff7eb3;">
-                              <i class="fas fa-coins"></i>
-                            </div>
-                            <div>
-                              <div class="stat-label">ยอดรวมสุทธิ</div>
-                              <div id="summaryGrandTotal" class="stat-value">
-                                ฿0.00
-                              </div>
-                            </div>
-                          </div>
-                    </div>
 
-                    <div class="table-responsive table-responsive-container">
+                        <div class="table-responsive table-responsive-container">
 
-                        <table>
-                            <thead>
-                                <tr>
-                                    <% if (order && order.length> 0) { %>
-                                        <% Object.keys(order[0]).forEach(h=> { %>
-                                            <th>
-                                                <%= h %>
-                                            </th>
-                                            <% }) %>
-                                                <th class="text-center">จัดการ</th>
-                                                <% } %>
-                                </tr>
-                            </thead>
-                            <tbody class="order">
-                                <% if (order && order.length> 0) { %>
-                                    <% order.forEach(row=> { %>
-                                        <tr>
-                                            <% Object.entries(row).forEach(([key, val])=> { %>
-                                                <td>
-                                                    <% if (key === 'สถานะเอกสาร') { %>
-                                                        <span class="status-badge <%= val === 'สำเร็จ' || val === 'ยืนยันแล้ว' ? 'status-success' : 'status-pending' %>">
-                                                            <%= val || 'ยังไม่ยืนยัน' %>
-                                                        </span>
-                                                    <% } else { %>
-                                                        <%= val %>
-                                                    <% } %>
-                                                </td>
-                                                <% }) %>
-                                                    <td class="text-center">
-                                                        <a href="#" onclick="openOrderModal(event)">
-                                                            <i class="fas fa-pencil"> </i>
-                                                        </a>
-                                                    </td>
-                                        </tr>
-                                        <% }) } else { %>
-                                            <tr>
-                                                <td colspan="100%" class="text-center">ไม่มีข้อมูล</td>
-                                            </tr>
-                                            <% } %>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #fff;">รายการสินค้า (สินค้าใหม่)</h3>
-                    <form action="/edit_sale" method="GET" class="search-form">
-                        <input type="hidden" name="id" value="<%= idToEdit %>">
-                        <div class="search-input-group">
-                            <i class="fas fa-search"></i>
-                            <input type="text" name="search" value="<%= search %>" placeholder="ค้นหาชื่อสินค้า"
-                                class="search-input">
-                        </div>
-                        <button type="submit" class="btn-search">
-                            <i class="fas fa-search"></i> ค้นหา
-                        </button>
-                        <a href="/sale_pr" class="btn-clear">
-                            <i class="fas fa-sync-alt"></i> ล้างค่า
-                        </a>
-                    </form>
-
-                    <div class="table-responsive items-table-container" style="overflow-x: auto; width: 100%;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th class="text-center"><i class="fas fa-check-square"></i></th>
-                                    <th>สินค้า</th>
-                                    <th>ชื่อสินค้า</th>
-                                    <th>ข้อมูลจำเพราะ</th>
-                                    <th class="text-center">จำนวน</th>
-                                    <th>หน่วย</th>
-                                    <th class="text-right">ราคาต่อหน่วย</th>
-                                    <th class="text-right">ภาษี</th>
-                                    <th class="text-right">ยอดรวม</th>
-                                </tr>
-                            </thead>
-                            <tbody id="salePrBody">
-                                <% if (sale_pr && sale_pr.length > 0) { %>
-                                    <% sale_pr.forEach(row => { %>
-                                        <tr class="item-row" data-product="<%= row['สินค้า'] %>">
-                                            <td class="text-center">
-                                                <input type="checkbox" class="item-checkbox">
-                                            </td>
-                                            <td><%= row['สินค้า'] %></td>
-                                            <td><%= row['ชื่อสินค้า'] %></td>
-                                            <td><%= row['ข้อมูลจำเพราะ'] %></td>
-                                            <td class="text-center">
-                                                <input type="number" class="item-qty" min="0" step="any" value="<%= row['จำนวน'] %>">
-                                            </td>
-                                            <td><%= row['หน่วย'] %></td>
-                                            <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <% 
-                                                // compute amount = qty * unitPrice, show total without VAT
-                                                const qtyVal = Number(parseFloat(String(row['จำนวน'] || 0).replace(/,/g, '')) || 0);
-                                                const priceVal = Number(parseFloat(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')) || 0);
-                                                const lineAmount = Number((qtyVal * priceVal) || 0);
-                                            %>
-                                            <td class="text-right"><%= lineAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['ภาษี'] || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= lineAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        </tr>
-                                    <% }) %>
-                                <% } %>
-
-                                <!-- Render new_Product data -->
-                                <% if (typeof newProductData !== 'undefined' && newProductData && newProductData.length > 0) { %>
-                                    <% newProductData.forEach(row => { %>
-                                        <tr class="item-row new-product-row" data-product="<%= row['สินค้า'] %>" style="background: rgba(255, 126, 179, 0.05);">
-                                            <td class="text-center">
-                                                <input type="checkbox" class="item-checkbox">
-                                            </td>
-                                            <td><%= row['สินค้า'] %> <span class="badge" style="font-size: 0.6rem; background: #ff7eb3; color: #fff; padding: 2px 4px; border-radius: 4px;">ใหม่</span></td>
-                                            <td><%= row['ชื่อสินค้า'] %></td>
-                                            <td><%= row['ข้อมูลจำเพราะ'] %></td>
-                                            <td class="text-center">
-                                                <input type="number" class="item-qty" min="0" step="any" value="<%= row['จำนวน'] %>">
-                                            </td>
-                                            <td><%= row['หน่วย'] %></td>
-                                            <% 
-                                                const npQty = Number(parseFloat(String(row['จำนวน'] || 0).replace(/,/g, '')) || 0);
-                                                const npPrice = Number(parseFloat(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')) || 0);
-                                                const npAmount = Number((npQty * npPrice) || 0);
-                                            %>
-                                            <td class="text-right"><%= npPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(String(row['ภาษี'] || 0).replace(/,/g, '') || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= npAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                        </tr>
-                                    <% }) %>
-                                <% } %>
-
-                                <% if ((!sale_pr || sale_pr.length === 0) && (!newProductData || newProductData.length === 0)) { %>
+                            <table>
+                                <thead>
                                     <tr>
-                                        <td colspan="100%" style="text-align: center;">ไม่มีข้อมูล</td>
+                                        <% if (order && order.length> 0) { %>
+                                            <% Object.keys(order[0]).forEach(h=> { %>
+                                                <th>
+                                                    <%= h %>
+                                                </th>
+                                                <% }) %>
+                                                    <th class="text-center">จัดการ</th>
+                                                    <% } %>
                                     </tr>
-                                <% } %>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="btn">
-                        <button type="button" id="btnSaveChanges" onclick="saveChanges()">ยืนยัน</button>
-                        <button type="button" id="btnprint" onclick="printPDF()">พิมพ์</button>
-                        <div class="add">
-                            <button type="button" class="btn-add" onclick="openModal()">
-                                <i class="fas fa-plus"></i> เพิ่ม
-                            </button>
-
-                            <script>
-                                // ข้อมูลพื้นฐานที่จำเป็นสำหรับ Modal และการบันทึก
-                                var allProducts = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(allProducts || [])) %>'));
-                                var newProductData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(newProductData || [])) %>'));
-                                
-                                // Merge new products into allProducts for recalculateTotals
-                                if (newProductData && newProductData.length > 0) {
-                                    newProductData.forEach(np => {
-                                        if (!allProducts.find(p => p['รหัส'] === np['สินค้า'])) {
-                                            allProducts.push({
-                                                'รหัส': np['สินค้า'],
-                                                'ชื่อ': np['ชื่อสินค้า'],
-                                                'ชื่อจำเพราะ': np['ข้อมูลจำเพราะ'],
-                                                'หน่วย': np['หน่วย'],
-                                                'ราคาขาย': np['ราคาต่อหน่วย'],
-                                                'อัตราภาษีขาย': '7%'
-                                            });
-                                        }
-                                    });
-                                }
-
-                                var rawSubSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
-                                var rawOrderData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(order || [])) %>'));
-                                var rawSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawSalesData || [])) %>'));
-                                var currentEditId = '<%= idToEdit %>';
-                                var pendingOrderChanges = null; 
-                            </script>
-                            <script src="model.js"></script>
-                            <button type="button" id="btnSoftDelete" onclick="softDelete()">ลบ</button>
+                                </thead>
+                                <tbody class="order">
+                                    <% if (order && order.length> 0) { %>
+                                        <% order.forEach(row=> { %>
+                                            <tr>
+                                                <% Object.entries(row).forEach(([key, val])=> { %>
+                                                    <td>
+                                                        <% if (key==='สถานะเอกสาร' ) { %>
+                                                            <span
+                                                                class="status-badge <%= val === 'สำเร็จ' || val === 'ยืนยันแล้ว' ? 'status-success' : 'status-pending' %>">
+                                                                <%= val || 'ยังไม่ยืนยัน' %>
+                                                            </span>
+                                                            <% } else { %>
+                                                                <%= val %>
+                                                                    <% } %>
+                                                    </td>
+                                                    <% }) %>
+                                                        <td class="text-center">
+                                                            <a href="#" onclick="openOrderModal(event)">
+                                                                <i class="fas fa-pencil"> </i>
+                                                            </a>
+                                                        </td>
+                                            </tr>
+                                            <% }) } else { %>
+                                                <tr>
+                                                    <td colspan="100%" class="text-center">ไม่มีข้อมูล</td>
+                                                </tr>
+                                                <% } %>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-    </main>
 
-    <%- include('modal.ejs') %>
-    <%- include('order_modal.ejs') %>
+                        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #fff;">รายการสินค้า (สินค้าใหม่)</h3>
+                        <form action="/edit_sale" method="GET" class="search-form">
+                            <input type="hidden" name="id" value="<%= idToEdit %>">
+                            <div class="search-input-group">
+                                <i class="fas fa-search"></i>
+                                <input type="text" name="search" value="<%= search %>" placeholder="ค้นหาชื่อสินค้า"
+                                    class="search-input">
+                            </div>
+                            <button type="submit" class="btn-search">
+                                <i class="fas fa-search"></i> ค้นหา
+                            </button>
+                            <a href="/sale_pr" class="btn-clear">
+                                <i class="fas fa-sync-alt"></i> ล้างค่า
+                            </a>
+                        </form>
 
-    <script>
-        // Configure SweetAlert2 globally
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            background: '#1d112e',
-            color: '#fff'
-        });
+                        <div class="table-responsive items-table-container" style="overflow-x: auto; width: 100%;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="text-center"><i class="fas fa-check-square"></i></th>
+                                        <th>สินค้า</th>
+                                        <th>ชื่อสินค้า</th>
+                                        <th>ข้อมูลจำเพราะ</th>
+                                        <th class="text-center">จำนวน</th>
+                                        <th>หน่วย</th>
+                                        <th class="text-right">ราคาต่อหน่วย</th>
+                                        <th class="text-right">ภาษี</th>
+                                        <th class="text-right">ยอดรวม</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salePrBody">
+                                    <% if (sale_pr && sale_pr.length> 0) { %>
+                                        <% sale_pr.forEach(row=> { %>
+                                            <tr class="item-row" data-product="<%= row['สินค้า'] %>">
+                                                <td class="text-center">
+                                                    <input type="checkbox" class="item-checkbox">
+                                                </td>
+                                                <td>
+                                                    <%= row['สินค้า'] %>
+                                                </td>
+                                                <td>
+                                                    <%= row['ชื่อสินค้า'] %>
+                                                </td>
+                                                <td>
+                                                    <%= row['ข้อมูลจำเพราะ'] %>
+                                                </td>
+                                                <td class="text-center">
+                                                    <input type="number" class="item-qty" min="0" step="any"
+                                                        value="<%= row['จำนวน'] %>">
+                                                </td>
+                                                <td>
+                                                    <%= row['หน่วย'] %>
+                                                </td>
+                                                <td class="text-right">
+                                                    <%= Number(Math.max(0, parseFloat(String(row['ราคาต่อหน่วย'] ||
+                                                        0).replace(/,/g, '' )) || 0)).toLocaleString('en-US',
+                                                        {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                                </td>
+                                                <% // compute amount=qty * unitPrice, show total without VAT const
+                                                    qtyVal=Number(parseFloat(String(row['จำนวน'] || 0).replace(/,/g, ''
+                                                    )) || 0); const
+                                                    priceVal=Number(parseFloat(String(row['ราคาต่อหน่วย'] ||
+                                                    0).replace(/,/g, '' )) || 0); const lineAmount=Number((qtyVal *
+                                                    priceVal) || 0); %>
+                                                    <td class="text-right">
+                                                        <%= lineAmount.toLocaleString('en-US', {minimumFractionDigits:
+                                                            2, maximumFractionDigits: 2}) %>
+                                                    </td>
+                                                    <td class="text-right">
+                                                        <%= Number(Math.max(0, parseFloat(String(row['ภาษี'] ||
+                                                            0).replace(/,/g, '' )) || 0)).toLocaleString('en-US',
+                                                            {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                                    </td>
+                                                    <td class="text-right">
+                                                        <%= lineAmount.toLocaleString('en-US', {minimumFractionDigits:
+                                                            2, maximumFractionDigits: 2}) %>
+                                                    </td>
+                                            </tr>
+                                            <% }) %>
+                                                <% } %>
 
-        // ฟังก์ชันลบแบบเลือก Checkbox
-        async function softDelete() {
-            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-            if (checkboxes.length === 0) {
-                Toast.fire({
-                    icon: 'warning',
-                    title: 'กรุณาเลือกรายการที่ต้องการลบ'
-                });
-                return;
-            }
+                                                    <!-- Render new_Product data -->
+                                                    <% if (typeof newProductData !=='undefined' && newProductData &&
+                                                        newProductData.length> 0) { %>
+                                                        <% newProductData.forEach(row=> { %>
+                                                            <tr class="item-row new-product-row"
+                                                                data-product="<%= row['สินค้า'] %>"
+                                                                style="background: rgba(255, 126, 179, 0.05);">
+                                                                <td class="text-center">
+                                                                    <input type="checkbox" class="item-checkbox">
+                                                                </td>
+                                                                <td>
+                                                                    <%= row['สินค้า'] %> <span class="badge"
+                                                                            style="font-size: 0.6rem; background: #ff7eb3; color: #fff; padding: 2px 4px; border-radius: 4px;">ใหม่</span>
+                                                                </td>
+                                                                <td>
+                                                                    <%= row['ชื่อสินค้า'] %>
+                                                                </td>
+                                                                <td>
+                                                                    <%= row['ข้อมูลจำเพราะ'] %>
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <input type="number" class="item-qty" min="0"
+                                                                        step="any" value="<%= row['จำนวน'] %>">
+                                                                </td>
+                                                                <td>
+                                                                    <%= row['หน่วย'] %>
+                                                                </td>
+                                                                <% const npQty=Number(parseFloat(String(row['จำนวน'] ||
+                                                                    0).replace(/,/g, '' )) || 0); const
+                                                                    npPrice=Number(parseFloat(String(row['ราคาต่อหน่วย']
+                                                                    || 0).replace(/,/g, '' )) || 0); const
+                                                                    npAmount=Number((npQty * npPrice) || 0); %>
+                                                                    <td class="text-right">
+                                                                        <%= npPrice.toLocaleString('en-US',
+                                                                            {minimumFractionDigits: 2,
+                                                                            maximumFractionDigits: 2}) %>
+                                                                    </td>
+                                                                    <td class="text-right">
+                                                                        <%= Number(String(row['ภาษี'] ||
+                                                                            0).replace(/,/g, '' ) ||
+                                                                            0).toLocaleString('en-US',
+                                                                            {minimumFractionDigits: 2,
+                                                                            maximumFractionDigits: 2}) %>
+                                                                    </td>
+                                                                    <td class="text-right">
+                                                                        <%= npAmount.toLocaleString('en-US',
+                                                                            {minimumFractionDigits: 2,
+                                                                            maximumFractionDigits: 2}) %>
+                                                                    </td>
+                                                            </tr>
+                                                            <% }) %>
+                                                                <% } %>
 
-            const result = await Swal.fire({
-                title: 'ยืนยันการลบ?',
-                text: `ยืนยันการลบ ${checkboxes.length} รายการที่เลือก?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#281a3d',
-                confirmButtonText: 'ลบรายการ',
-                cancelButtonText: 'ยกเลิก',
-                background: '#1d112e',
-                color: '#fff'
-            });
+                                                                    <% if ((!sale_pr || sale_pr.length===0) &&
+                                                                        (!newProductData || newProductData.length===0))
+                                                                        { %>
+                                                                        <tr>
+                                                                            <td colspan="100%"
+                                                                                style="text-align: center;">ไม่มีข้อมูล
+                                                                            </td>
+                                                                        </tr>
+                                                                        <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="btn">
+                            <button type="button" id="btnSaveChanges" onclick="saveChanges()">ยืนยัน</button>
+                            <button type="button" id="btnprint" onclick="printPDF()">พิมพ์</button>
+                            <div class="add">
+                                <button type="button" class="btn-add" onclick="openModal()">
+                                    <i class="fas fa-plus"></i> เพิ่ม
+                                </button>
 
-            if (result.isConfirmed) {
-                checkboxes.forEach(cb => {
-                    const row = cb.closest('tr');
-                    row.style.display = 'none';
-                    row.querySelector('.item-qty').value = 0;
-                    cb.checked = false;
-                });
-                Toast.fire({
-                    icon: 'success',
-                    title: 'ลบรายการชั่วคราวแล้ว'
-                });
-            }
-        }
+                                <script>
+                                    // ข้อมูลพื้นฐานที่จำเป็นสำหรับ Modal และการบันทึก
+                                    var allProducts = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(allProducts || [])) %>'));
+                                    var newProductData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(newProductData || [])) %>'));
 
-        async function saveChanges() {
-            const rows = document.querySelectorAll('#salePrBody .item-row');
-            const finalItems = [];
+                                    // Merge new products into allProducts for recalculateTotals
+                                    if (newProductData && newProductData.length > 0) {
+                                        newProductData.forEach(np => {
+                                            if (!allProducts.find(p => p['รหัส'] === np['สินค้า'])) {
+                                                allProducts.push({
+                                                    'รหัส': np['สินค้า'],
+                                                    'ชื่อ': np['ชื่อสินค้า'],
+                                                    'ชื่อจำเพราะ': np['ข้อมูลจำเพราะ'],
+                                                    'หน่วย': np['หน่วย'],
+                                                    'ราคาขาย': np['ราคาต่อหน่วย'],
+                                                    'อัตราภาษีขาย': '7%'
+                                                });
+                                            }
+                                        });
+                                    }
 
-            rows.forEach(row => {
-                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-                const productCode = row.getAttribute('data-product');
-                
-                if (row.style.display !== 'none' && qty > 0) {
-                    const priceText = row.cells[6].innerText.replace(/,/g, '');
-                    const rowPrice = Math.max(0, parseFloat(priceText) || 0);
-                    const productInfo = allProducts.find(p => p['รหัส'] === productCode);
+                                    var rawSubSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(data || [])) %>'));
+                                    var rawOrderData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(order || [])) %>'));
+                                    var rawSalesData = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(rawSalesData || [])) %>'));
+                                    var currentEditId = '<%= idToEdit %>';
+                                    var pendingOrderChanges = null; 
+                                </script>
+                                <script src="model.js"></script>
+                                <button type="button" id="btnSoftDelete" onclick="softDelete()">ลบ</button>
+                            </div>
+                        </div>
+        </main>
 
-                    finalItems.push({
-                        'รหัส': productCode,
-                        'ชื่อ': row.cells[2].innerText,
-                        'ชื่อจำเพราะ': row.cells[3].innerText,
-                        'หน่วย': row.cells[5].innerText,
-                        'ราคาขาย': rowPrice,
-                        'อัตราภาษีขาย': productInfo ? Math.max(0, parseFloat((productInfo['อัตราภาษีขาย'] || '0').toString().replace('%', '')) || 0) : 0,
-                        quantity: qty
+        <%- include('modal.ejs') %>
+            <%- include('order_modal.ejs') %>
+
+                <script>
+                    // Configure SweetAlert2 globally
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        background: '#1d112e',
+                        color: '#fff'
                     });
-                }
-            });
 
-            if (finalItems.length === 0 && !pendingOrderChanges) {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'ไม่มีการเปลี่ยนแปลง',
-                    text: 'ไม่มีรายการที่เปลี่ยนแปลง หรือไม่มีสินค้าเหลือในรายการ',
-                    background: '#1d112e',
-                    color: '#fff'
-                });
-                return;
-            }
+                    // ฟังก์ชันลบแบบเลือก Checkbox
+                    async function softDelete() {
+                        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+                        if (checkboxes.length === 0) {
+                            Toast.fire({
+                                icon: 'warning',
+                                title: 'กรุณาเลือกรายการที่ต้องการลบ'
+                            });
+                            return;
+                        }
 
-            const result = await Swal.fire({
-                title: 'ยืนยันการบันทึก?',
-                text: 'ยืนยันการบันทึกการเปลี่ยนแปลงทั้งหมด?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#ff7eb3',
-                cancelButtonColor: '#281a3d',
-                confirmButtonText: 'บันทึกข้อมูล',
-                cancelButtonText: 'ยกเลิก',
-                background: '#1d112e',
-                color: '#fff'
-            });
+                        const result = await Swal.fire({
+                            title: 'ยืนยันการลบ?',
+                            text: `ยืนยันการลบ ${checkboxes.length} รายการที่เลือก?`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#dc3545',
+                            cancelButtonColor: '#281a3d',
+                            confirmButtonText: 'ลบรายการ',
+                            cancelButtonText: 'ยกเลิก',
+                            background: '#1d112e',
+                            color: '#fff'
+                        });
 
-            if (!result.isConfirmed) return;
+                        if (result.isConfirmed) {
+                            checkboxes.forEach(cb => {
+                                const row = cb.closest('tr');
+                                row.style.display = 'none';
+                                row.querySelector('.item-qty').value = 0;
+                                cb.checked = false;
+                            });
+                            Toast.fire({
+                                icon: 'success',
+                                title: 'ลบรายการชั่วคราวแล้ว'
+                            });
+                        }
+                    }
 
-            // Show loading
-            Swal.fire({
-                title: 'กำลังบันทึกข้อมูล...',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                },
-                background: '#1d112e',
-                color: '#fff'
-            });
+                    async function saveChanges() {
+                        const rows = document.querySelectorAll('#salePrBody .item-row');
+                        const finalItems = [];
 
-            try {
-                // Log payload for debugging
-                console.log('SAVE payload', {
-                    id: currentEditId,
-                    finalItems: finalItems,
-                    orderChanges: pendingOrderChanges
-                });
+                        rows.forEach(row => {
+                            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                            const productCode = row.getAttribute('data-product');
 
-                const response = await fetch('/api/save_changes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: currentEditId,
-                        finalItems: finalItems,
-                        orderChanges: pendingOrderChanges
-                    })
-                });
+                            if (row.style.display !== 'none' && qty > 0) {
+                                const priceText = row.cells[6].innerText.replace(/,/g, '');
+                                const rowPrice = Math.max(0, parseFloat(priceText) || 0);
+                                const productInfo = allProducts.find(p => p['รหัส'] === productCode);
 
-                const data = await response.json();
+                                finalItems.push({
+                                    'รหัส': productCode,
+                                    'ชื่อ': row.cells[2].innerText,
+                                    'ชื่อจำเพราะ': row.cells[3].innerText,
+                                    'หน่วย': row.cells[5].innerText,
+                                    'ราคาขาย': rowPrice,
+                                    'อัตราภาษีขาย': productInfo ? Math.max(0, parseFloat((productInfo['อัตราภาษีขาย'] || '0').toString().replace('%', '')) || 0) : 0,
+                                    quantity: qty
+                                });
+                            }
+                        });
 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
+                        if (finalItems.length === 0 && !pendingOrderChanges) {
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'ไม่มีการเปลี่ยนแปลง',
+                                text: 'ไม่มีรายการที่เปลี่ยนแปลง หรือไม่มีสินค้าเหลือในรายการ',
+                                background: '#1d112e',
+                                color: '#fff'
+                            });
+                            return;
+                        }
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'บันทึกสำเร็จ!',
-                    text: 'ข้อมูลถูกอัปเดตเรียบร้อยแล้ว',
-                    background: '#1d112e',
-                    color: '#fff',
-                    confirmButtonColor: '#ff7eb3'
-                }).then(() => {
-                    window.location.reload();
-                });
-            } catch (err) {
-                console.error('Save error:', err);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'เกิดข้อผิดพลาด',
-                    text: err.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
-                    background: '#1d112e',
-                    color: '#fff'
-                });
-            }
-        }
+                        const result = await Swal.fire({
+                            title: 'ยืนยันการบันทึก?',
+                            text: 'ยืนยันการบันทึกการเปลี่ยนแปลงทั้งหมด?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: '#ff7eb3',
+                            cancelButtonColor: '#281a3d',
+                            confirmButtonText: 'บันทึกข้อมูล',
+                            cancelButtonText: 'ยกเลิก',
+                            background: '#1d112e',
+                            color: '#fff'
+                        });
 
-        async function printPDF() {
-            const rows = document.querySelectorAll('#salePrBody .item-row');
-            
-            const itemsObject = {};
-            let hasItems = false;
-            let totalAmount = 0; 
-            let totalVat = 0;
-            let grandTotal = 0;
+                        if (!result.isConfirmed) return;
 
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-                    if (qty > 0) {
-                        hasItems = true;
-                        const sku = row.cells[1].innerText.trim().replace(' ใหม่', '');
-                        const productName = row.cells[2].innerText.trim();
-                        const detail = row.cells[3].innerText.trim();
-                        const unit = row.cells[5].innerText.trim();
-                        
-                        // Grab raw values directly from the table cells, stripping commas
-                        const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
-                        // Treat unitPrice as VAT-exclusive: compute line amount by qty * unitPrice
-                        const amount = parseFloat((unitPrice * qty).toFixed(2)) || 0;
-                        // Preserve displayed per-item VAT (for information) but do not add it to per-row total
-                        const displayedVat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                        const total = amount; // per-row total excludes VAT
-                        
-                        itemsObject[sku] = {
-                            'sku': sku,
-                            'productName': productName,
-                            'info': detail,
-                            'qty': qty,
-                            'unit': unit,
-                            'unitPrice': unitPrice,
-                            'amount': amount,
-                            'vat': displayedVat,
-                            'total': total
+                        // Show loading
+                        Swal.fire({
+                            title: 'กำลังบันทึกข้อมูล...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            },
+                            background: '#1d112e',
+                            color: '#fff'
+                        });
+
+                        try {
+                            // Log payload for debugging
+                            console.log('SAVE payload', {
+                                id: currentEditId,
+                                finalItems: finalItems,
+                                orderChanges: pendingOrderChanges
+                            });
+
+                            const response = await fetch('/api/save_changes', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    id: currentEditId,
+                                    finalItems: finalItems,
+                                    orderChanges: pendingOrderChanges
+                                })
+                            });
+
+                            const data = await response.json();
+
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'บันทึกสำเร็จ!',
+                                text: 'ข้อมูลถูกอัปเดตเรียบร้อยแล้ว',
+                                background: '#1d112e',
+                                color: '#fff',
+                                confirmButtonColor: '#ff7eb3'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } catch (err) {
+                            console.error('Save error:', err);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'เกิดข้อผิดพลาด',
+                                text: err.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+                                background: '#1d112e',
+                                color: '#fff'
+                            });
+                        }
+                    }
+
+                    async function printPDF() {
+                        const rows = document.querySelectorAll('#salePrBody .item-row');
+
+                        const itemsObject = {};
+                        let hasItems = false;
+                        let totalAmount = 0;
+                        let totalVat = 0;
+                        let grandTotal = 0;
+
+                        rows.forEach(row => {
+                            if (row.style.display !== 'none') {
+                                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                                if (qty > 0) {
+                                    hasItems = true;
+                                    const sku = row.cells[1].innerText.trim().replace(' ใหม่', '');
+                                    const productName = row.cells[2].innerText.trim();
+                                    const detail = row.cells[3].innerText.trim();
+                                    const unit = row.cells[5].innerText.trim();
+
+                                    // Grab raw values directly from the table cells, stripping commas
+                                    const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
+                                    // Treat unitPrice as VAT-exclusive: compute line amount by qty * unitPrice
+                                    const amount = parseFloat((unitPrice * qty).toFixed(2)) || 0;
+                                    // Preserve displayed per-item VAT (for information) but do not add it to per-row total
+                                    const displayedVat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                                    const total = amount; // per-row total excludes VAT
+
+                                    itemsObject[sku] = {
+                                        'sku': sku,
+                                        'productName': productName,
+                                        'info': detail,
+                                        'qty': qty,
+                                        'unit': unit,
+                                        'unitPrice': unitPrice,
+                                        'amount': amount,
+                                        'vat': displayedVat,
+                                        'total': total
+                                    };
+
+                                    totalAmount += amount;
+                                    // totalVat will be computed after summing all amounts (global 7% VAT)
+                                    // grandTotal will be computed after VAT calculation
+                                }
+                            }
+                        });
+
+                        if (!hasItems) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'ไม่มีรายการสินค้า',
+                                text: 'ไม่มีรายการสินค้าสำหรับสั่งพิมพ์',
+                                background: '#1d112e',
+                                color: '#fff'
+                            });
+                            return;
+                        }
+
+                        const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+                        const customerName = headerData['ลูกค้า-ผู้ขาย'] || '';
+                        const picInfo = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(typeof picInfo !== "undefined" ? picInfo : {})) %>'));
+                        const currentUser = JSON.parse(decodeURIComponent('<%= encodeURIComponent(JSON.stringify(typeof user !== "undefined" ? user : {})) %>'));
+
+                        // Show loading for data fetching
+                        Swal.fire({
+                            title: 'กำลังเตรียมข้อมูล...',
+                            text: 'กำลังดึงที่อยู่คู่ค้า',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            },
+                            background: '#1d112e',
+                            color: '#fff'
+                        });
+
+                        let vendorAddress = "";
+                        let vendorCode = headerData['เลขที่'] || '';
+                        let vendorPhone = headerData['โทรศัพท์'] || '';
+
+                        try {
+                            const infoRes = await fetch(`/api/customer_info?name=${encodeURIComponent(customerName)}`);
+                            const infoData = await infoRes.json();
+                            if (infoData.success) {
+                                vendorAddress = infoData.address || "";
+                                if (!vendorCode) vendorCode = infoData.code || "";
+                                if (!vendorPhone) vendorPhone = infoData.phone || "";
+                            }
+                        } catch (e) {
+                            console.warn("Could not fetch vendor info:", e);
+                        }
+
+                        const d = new Date();
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        const formattedDate = `${year}-${month}-${day}`;
+
+                        const vatRate = 0.07; // 7% VAT applied to subtotal
+                        totalVat = parseFloat((totalAmount * vatRate).toFixed(2));
+                        grandTotal = parseFloat((totalAmount + totalVat).toFixed(2));
+
+                        const payload = {
+                            id: currentEditId,
+                            orderDate: formattedDate,
+                            title: 'ใบเสนอราคา',
+                            title_eng: 'Quotation',
+                            customerCode: vendorCode,
+                            contactName: headerData['ผู้ติดต่อ'] || '',
+                            vendorName: customerName,
+                            vendorAddress: vendorAddress,
+                            vendorPhone: vendorPhone,
+                            approvalNo: headerData['id'] || currentEditId,
+                            deliveryDate: headerData['วันที่ส่งมอบ'] || '',
+                            creditDays: headerData['เครดิต (วัน)'] || '30',
+                            paymentTerms: headerData['ประเภทธุรกรรม'] || '',
+                            preparedBy: currentUser['ชื่อpic'] || headerData['PIC'] || '',
+                            authorizedBy: '',
+                            grandTotal: Number(grandTotal.toFixed(2)),
+                            vat: Number(totalVat.toFixed(2)),
+                            picName: currentUser['ชื่อpic'] || headerData['PIC'] || '',
+                            picDepartment: currentUser['แผนก'] || 'Sales & Marketing Dept.',
+                            items: [itemsObject]
                         };
-                        
-                        totalAmount += amount;
-                        // totalVat will be computed after summing all amounts (global 7% VAT)
-                        // grandTotal will be computed after VAT calculation
+
+                        // Show loading
+                        Swal.fire({
+                            title: 'กำลังสร้าง PDF...',
+                            text: 'กรุณารอสักครู่',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            },
+                            background: '#1d112e',
+                            color: '#fff'
+                        });
+
+                        try {
+                            // Log payload for debugging
+                            console.log('PRINT payload', payload);
+
+                            const response = await fetch('/api/generate-po-pdf', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            const contentType = response.headers.get('content-type');
+
+                            if (contentType && contentType.includes('application/json')) {
+                                const result = await response.json();
+                                if (!response.ok) {
+                                    throw new Error(result.error || result.detail || 'PDF Generation API returned an error');
+                                }
+                                if (result.pdf_link) {
+                                    window.open(result.pdf_link, '_blank');
+                                    Swal.close();
+                                    Toast.fire({ icon: 'success', title: 'เปิดดู PDF สำเร็จ' });
+                                } else {
+                                    throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ (API ตอบกลับมาสำเร็จแต่ไม่มี pdf_link)');
+                                }
+                            } else if (contentType && contentType.includes('application/pdf')) {
+                                const blob = await response.blob();
+                                const pdfUrl = URL.createObjectURL(blob);
+                                window.open(pdfUrl, '_blank');
+                                Swal.close();
+                                Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
+                            } else {
+                                const errorText = await response.text();
+                                console.error("Non-JSON error from API:", errorText);
+                                throw new Error('ระบบสร้าง PDF ขัดข้อง: ' + (errorText.substring(0, 100) || 'Unknown format'));
+                            }
+                        } catch (err) {
+                            console.error('Print error detailed:', err);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'เกิดข้อผิดพลาดในการพิมพ์',
+                                text: err.message,
+                                background: '#1d112e',
+                                color: '#fff'
+                            });
+                        }
                     }
-                }
-            });
 
-            if (!hasItems) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'ไม่มีรายการสินค้า',
-                    text: 'ไม่มีรายการสินค้าสำหรับสั่งพิมพ์',
-                    background: '#1d112e',
-                    color: '#fff'
-                });
-                return;
-            }
+                    // --- Logic สำหรับ Order Modal ---
+                    const readOnlyFields = ["id", "วันที่สร้าง", "ผู้สร้าง", "ผู้แก้ไขล่าสุด", "วันที่สร้าง", "วันที่แก้ไขล่าสุด", "สถานะเอกสาร", "PIC", "วันที่"];
+                    var orderFields = [];
 
-            const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
-            const customerName = headerData['ลูกค้า-ผู้ขาย'] || '';
-            const picInfo = <%- JSON.stringify(picInfo || {}) %>;
-            const currentUser = <%- JSON.stringify(user || {}) %>;
+                    function openOrderModal(e) {
+                        if (e) e.preventDefault();
+                        const grid = document.getElementById('orderFormGrid');
+                        grid.innerHTML = '';
 
-            // Show loading for data fetching
-            Swal.fire({
-                title: 'กำลังเตรียมข้อมูล...',
-                text: 'กำลังดึงที่อยู่คู่ค้า',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                },
-                background: '#1d112e',
-                color: '#fff'
-            });
+                        const currentData = rawSalesData.length > 0 ? rawSalesData[0] : {};
+                        orderFields = Object.keys(currentData);
 
-            let vendorAddress = "";
-            let vendorCode = headerData['เลขที่'] || ''; 
-            let vendorPhone = headerData['โทรศัพท์'] || '';
+                        orderFields.forEach(field => {
+                            const val = currentData[field] || '';
+                            const isReadOnly = readOnlyFields.includes(field);
 
-            try {
-                const infoRes = await fetch(`/api/customer_info?name=${encodeURIComponent(customerName)}`);
-                const infoData = await infoRes.json();
-                if (infoData.success) {
-                    vendorAddress = infoData.address || "";
-                    if (!vendorCode) vendorCode = infoData.code || "";
-                    if (!vendorPhone) vendorPhone = infoData.phone || "";
-                }
-            } catch (e) {
-                console.warn("Could not fetch vendor info:", e);
-            }
-            
-            const d = new Date();
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            const formattedDate = `${year}-${month}-${day}`;
-            
-            const vatRate = 0.07; // 7% VAT applied to subtotal
-            totalVat = parseFloat((totalAmount * vatRate).toFixed(2));
-            grandTotal = parseFloat((totalAmount + totalVat).toFixed(2));
+                            const group = document.createElement('div');
+                            group.className = 'order-form-group';
 
-            const payload = {
-                id: currentEditId,
-                orderDate: formattedDate,
-                title: 'ใบเสนอราคา',
-                title_eng: 'Quotation',
-                customerCode: vendorCode,
-                contactName: headerData['ผู้ติดต่อ'] || '',
-                vendorName: customerName,
-                vendorAddress: vendorAddress,
-                vendorPhone: vendorPhone,
-                approvalNo: headerData['id'] || currentEditId,
-                deliveryDate: headerData['วันที่ส่งมอบ'] || '',
-                creditDays: headerData['เครดิต (วัน)'] || '30',
-                paymentTerms: headerData['ประเภทธุรกรรม'] || '',
-                preparedBy: currentUser['ชื่อpic'] || headerData['PIC'] || '',
-                authorizedBy: '',
-                grandTotal: Number(grandTotal.toFixed(2)),
-                vat: Number(totalVat.toFixed(2)),
-                picName: currentUser['ชื่อpic'] || headerData['PIC'] || '',
-                picDepartment: currentUser['แผนก'] || 'Sales & Marketing Dept.',
-                items: [itemsObject]
-            };
+                            const label = document.createElement('label');
+                            label.innerText = field;
 
-            // Show loading
-            Swal.fire({
-                title: 'กำลังสร้าง PDF...',
-                text: 'กรุณารอสักครู่',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                },
-                background: '#1d112e',
-                color: '#fff'
-            });
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.id = 'edit_order_' + field;
+                            input.value = val;
+                            if (isReadOnly) {
+                                input.readOnly = true;
+                            }
 
-            try {
-                // Log payload for debugging
-                console.log('PRINT payload', payload);
+                            group.appendChild(label);
+                            group.appendChild(input);
+                            grid.appendChild(group);
+                        });
 
-                const response = await fetch('/api/generate-po-pdf', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const contentType = response.headers.get('content-type');
-
-                if (contentType && contentType.includes('application/json')) {
-                    const result = await response.json();
-                    if (!response.ok) {
-                        throw new Error(result.error || result.detail || 'PDF Generation API returned an error');
+                        document.getElementById('orderModal').style.display = 'flex';
                     }
-                    if (result.pdf_link) {
-                        window.open(result.pdf_link, '_blank');
-                        Swal.close();
-                        Toast.fire({ icon: 'success', title: 'เปิดดู PDF สำเร็จ' });
-                    } else {
-                        throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ (API ตอบกลับมาสำเร็จแต่ไม่มี pdf_link)');
+
+                    function closeOrderModal() {
+                        document.getElementById('orderModal').style.display = 'none';
                     }
-                } else if (contentType && contentType.includes('application/pdf')) {
-                    const blob = await response.blob();
-                    const pdfUrl = URL.createObjectURL(blob);
-                    window.open(pdfUrl, '_blank');
-                    Swal.close();
-                    Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
-                } else {
-                    const errorText = await response.text();
-                    console.error("Non-JSON error from API:", errorText);
-                    throw new Error('ระบบสร้าง PDF ขัดข้อง: ' + (errorText.substring(0, 100) || 'Unknown format'));
-                }
-            } catch (err) {
-                console.error('Print error detailed:', err);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'เกิดข้อผิดพลาดในการพิมพ์',
-                    text: err.message,
-                    background: '#1d112e',
-                    color: '#fff'
-                });
-            }
-        }
 
-        // --- Logic สำหรับ Order Modal ---
-        const readOnlyFields = ["id", "วันที่สร้าง", "ผู้สร้าง", "ผู้แก้ไขล่าสุด", "วันที่สร้าง", "วันที่แก้ไขล่าสุด", "สถานะเอกสาร", "PIC", "วันที่"];
-        var orderFields = [];
+                    function saveOrderDetails() {
+                        var updatedData = {};
+                        orderFields.forEach(function (field) {
+                            var input = document.getElementById('edit_order_' + field);
+                            if (input && !input.readOnly) {
+                                updatedData[field] = input.value;
+                            }
+                        });
 
-        function openOrderModal(e) {
-            if (e) e.preventDefault();
-            const grid = document.getElementById('orderFormGrid');
-            grid.innerHTML = '';
+                        pendingOrderChanges = updatedData;
 
-            const currentData = rawSalesData.length > 0 ? rawSalesData[0] : {};
-            orderFields = Object.keys(currentData);
+                        if (rawSalesData.length > 0) {
+                            Object.keys(updatedData).forEach(function (key) {
+                                rawSalesData[0][key] = updatedData[key];
+                            });
+                        }
 
-            orderFields.forEach(field => {
-                const val = currentData[field] || '';
-                const isReadOnly = readOnlyFields.includes(field);
+                        var orderBody = document.querySelector('.order');
+                        if (orderBody && rawOrderData.length > 0) {
+                            var row = orderBody.querySelector('tr');
+                            if (row) {
+                                var cells = row.querySelectorAll('td');
+                                var keys = Object.keys(rawOrderData[0]);
+                                keys.forEach(function (key, i) {
+                                    if (cells[i]) cells[i].textContent = rawOrderData[0][key] || '';
+                                });
+                            }
+                        }
 
-                const group = document.createElement('div');
-                group.className = 'order-form-group';
-
-                const label = document.createElement('label');
-                label.innerText = field;
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.id = 'edit_order_' + field;
-                input.value = val;
-                if (isReadOnly) {
-                    input.readOnly = true;
-                }
-
-                group.appendChild(label);
-                group.appendChild(input);
-                grid.appendChild(group);
-            });
-
-            document.getElementById('orderModal').style.display = 'flex';
-        }
-
-        function closeOrderModal() {
-            document.getElementById('orderModal').style.display = 'none';
-        }
-
-        function saveOrderDetails() {
-            var updatedData = {};
-            orderFields.forEach(function (field) {
-                var input = document.getElementById('edit_order_' + field);
-                if (input && !input.readOnly) {
-                    updatedData[field] = input.value;
-                }
-            });
-
-            pendingOrderChanges = updatedData;
-
-            if (rawSalesData.length > 0) {
-                Object.keys(updatedData).forEach(function (key) {
-                    rawSalesData[0][key] = updatedData[key];
-                });
-            }
-            
-            var orderBody = document.querySelector('.order');
-            if (orderBody && rawOrderData.length > 0) {
-                var row = orderBody.querySelector('tr');
-                if (row) {
-                    var cells = row.querySelectorAll('td');
-                    var keys = Object.keys(rawOrderData[0]);
-                    keys.forEach(function (key, i) {
-                        if (cells[i]) cells[i].textContent = rawOrderData[0][key] || '';
-                    });
-                }
-            }
-
-            closeOrderModal();
-            Swal.fire({
-                icon: 'success',
-                title: 'บันทึกการแก้ไขหัวเอกสารแล้ว',
-                text: 'กรุณากด "ยืนยัน" อีกครั้งเพื่อบันทึกลงฐานข้อมูล',
-                background: '#1d112e',
-                color: '#fff',
-                confirmButtonColor: '#ff7eb3'
-            });
-        }
-    </script>
-    <script src="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/dynamic_favicon.js"></script>
+                        closeOrderModal();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'บันทึกการแก้ไขหัวเอกสารแล้ว',
+                            text: 'กรุณากด "ยืนยัน" อีกครั้งเพื่อบันทึกลงฐานข้อมูล',
+                            background: '#1d112e',
+                            color: '#fff',
+                            confirmButtonColor: '#ff7eb3'
+                        });
+                    }
+                </script>
+                <script src="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/dynamic_favicon.js"></script>
 </body>
 
 </html>

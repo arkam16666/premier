@@ -1,7 +1,5 @@
 /* Reset and Core Layout */
-* {
-    font-family: 'Kanit', sans-serif !important;
-}
+
 
 .add-sale-page {
     background-color: #0c0816;
@@ -309,3 +307,4 @@
         justify-content: center;
     }
 }
+

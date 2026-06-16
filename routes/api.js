@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = (dependencies) => {
     const router = express.Router();
@@ -52,7 +54,34 @@ module.exports = (dependencies) => {
     // Proxy สำหรับสร้าง PO PDF (เพื่อแก้ปัญหา CORS)
     router.post('/api/generate-po-pdf', async (req, res) => {
         try {
+            // Debug incoming payload
+            try {
+                const preview = JSON.stringify(req.body).slice(0,1200);
+                console.log(`[DEBUG] /api/generate-po-pdf called at ${new Date().toISOString()} - payload keys: ${Object.keys(req.body || {}).length} - preview: ${preview}`);
+                // Append to debug log file for easier inspection
+                try {
+                    const logFile = path.join(process.cwd(), 'print_debug.log');
+                    fs.appendFileSync(logFile, `${new Date().toISOString()} | /api/generate-po-pdf | keys:${Object.keys(req.body || {}).length} | preview:${preview}\n`);
+                } catch (fileErr) {
+                    console.error('[WARN] Could not write print_debug.log:', fileErr.message);
+                }
+            } catch (e) {
+                console.log('[DEBUG] /api/generate-po-pdf called - could not stringify body', e.message);
+            }
+
             console.log("[DEBUG] Requesting PO PDF from external API...");
+
+            // Debug-only shortcut: if client adds ?debug=1 or header x-debug:1, just echo the payload
+            const isDebug = (req.query && req.query.debug === '1') || req.headers['x-debug'] === '1';
+            if (isDebug) {
+                try {
+                    const preview = JSON.stringify(req.body).slice(0,1200);
+                    return res.json({ success: true, debug: true, keys: Object.keys(req.body || {}).length, preview });
+                } catch (e) {
+                    return res.json({ success: true, debug: true, keys: Object.keys(req.body || {}).length });
+                }
+            }
+
             const response = await fetch(`https://pdf.thanadon.click/api/generate-pdf/po`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },        
@@ -111,6 +140,14 @@ module.exports = (dependencies) => {
     // 1. ส่งข้อมูลไปให้ Python Generate PDF และรับไฟล์ PDF กลับมาตรงๆ (Direct Stream)
     router.post('/api/generate-pdf', async (req, res) => {
         try {
+            // Added debug logging to trace incoming print requests
+            try {
+                const preview = JSON.stringify(req.body, Object.keys(req.body).slice(0,50)).slice(0,1200);
+                console.log(`[DEBUG] /api/generate-pdf called at ${new Date().toISOString()} - payload keys: ${Object.keys(req.body || {}).length} - preview: ${preview}`);
+            } catch (logErr) {
+                console.log('[DEBUG] /api/generate-pdf called at', new Date().toISOString(), '- (could not stringify body)', logErr.message);
+            }
+
             console.log("[DEBUG] Sending data to Python PDF Service (Stream)...");
             const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf`, {
                 method: 'POST',

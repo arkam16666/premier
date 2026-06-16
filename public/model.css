@@ -2,9 +2,7 @@
    Modal Overlay - พื้นหลังมืด
    ======================================== */
 
-* {
-    font-family: 'Kanit', sans-serif !important;
-}
+
 
 .modal-overlay {
     display: none;
