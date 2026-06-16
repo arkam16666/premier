@@ -403,7 +403,7 @@ td[colspan="100%"] {
     }
 }
 
-a i {
+td a i {
     border: none;
     padding: 12px 16px;
     cursor: pointer;
