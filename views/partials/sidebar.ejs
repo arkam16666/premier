@@ -1,0 +1,90 @@
+<aside class="sidebar">
+    <div class="logo">
+        <div class="logo-icon">
+            <i class="fas fa-layer-group"></i>
+        </div>
+        <div class="logo-text">
+            <h2>ระบบ ERP</h2>
+            <span>Premier Edition</span>
+        </div>
+    </div>
+
+    <nav class="menu">
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/" class="nav-link"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+        <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/add_sale" class="nav-link"><i class="fas fa-plus-circle"></i> <span>เพิ่มออเดอร์</span></a>
+        <% } %>
+        
+        <div class="menu-section">Sales</div>
+        <% if (!user || !user.role || user.role === 'admin' || user.role === 'sales') { %>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/sale_pr" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> <span>เสนอขาย (PR)</span></a>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/sale_so" class="nav-link"><i class="fas fa-file-signature"></i> <span>Sale SO</span></a>
+        <% } %>
+        
+        <div class="menu-section">Purchasing</div>
+        <% if (!user || !user.role || user.role === 'admin' || user.role === 'procurement') { %>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/precher_pr" class="nav-link"><i class="fas fa-shopping-cart"></i> <span>เสนอซื้อ (PR)</span></a>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/purchase_order" class="nav-link"><i class="fas fa-file-invoice"></i> <span>Purchase PO</span></a>
+        <% } %>
+        
+        <div class="menu-section">Inventory</div>
+        <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/inventory" class="nav-link"><i class="fas fa-boxes"></i> <span>คลังสินค้า</span></a>
+        <% } %>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/ai_chat" class="nav-link"><i class="fas fa-robot"></i> <span>AI Assistant</span></a>
+        
+        <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
+        <div class="menu-section">Admin</div>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/audit" class="nav-link"><i class="fas fa-history"></i> <span>ประวัติใช้งาน</span></a>
+        <% } %>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">
+                <i class="fas fa-user-astronaut"></i>
+            </div>
+            <div class="user-details">
+                <div class="user-name"><%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %></div>
+                <div class="user-role"><%= (typeof user !=='undefined' && user && user.role) ? user.role.toUpperCase() : 'USER' %></div>
+            </div>
+        </div>
+        <a href="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/logout" class="btn-logout">
+            <i class="fas fa-sign-out-alt"></i> <span>ออกจากระบบ</span>
+        </a>
+    </div>
+</aside>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll('.sidebar .nav-link');
+        
+        navLinks.forEach(link => link.classList.remove('active'));
+
+        let matched = false;
+        
+        navLinks.forEach(link => {
+            const linkPath = new URL(link.href).pathname;
+            if (currentPath === linkPath) {
+                link.classList.add('active');
+                matched = true;
+            }
+        });
+
+        if (!matched) {
+            navLinks.forEach(link => {
+                const linkPath = new URL(link.href).pathname;
+                if (linkPath !== '/' && linkPath !== '<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/' && linkPath !== '') {
+                    if (currentPath.startsWith(linkPath)) {
+                        link.classList.add('active');
+                    }
+                }
+            });
+        }
+        
+        if (!matched && (currentPath === '/' || currentPath === '<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/' || currentPath === '')) {
+             if(navLinks[0]) navLinks[0].classList.add('active');
+        }
+    });
+</script>

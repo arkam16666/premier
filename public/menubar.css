@@ -1,11 +1,4 @@
-* {
-    font-family: "Sarabun", sans-serif;
-    font-weight: 500;
-    font-style: normal;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 /* ===== Keyframes ===== */
 @keyframes slideInLeft {
@@ -30,46 +23,27 @@
     }
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-
-@keyframes scaleIn {
-    from {
-        transform: scale(0.85);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes glowPulse {
-    0%, 100% { box-shadow: 0 4px 15px rgba(167, 134, 255, 0.4); }
-    50%      { box-shadow: 0 4px 25px rgba(255, 126, 179, 0.6); }
-}
-
 /* ===== Sidebar ===== */
 .sidebar {
-    width: 200px;
-    min-width: 200px;
+    width: 260px;
+    min-width: 260px;
     height: 100vh;
-    background-color: #130a1c;
+    background: linear-gradient(180deg, #130a1c 0%, #1c0f2a 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
     color: white;
     position: fixed;
     top: 0;
     left: 0;
-    z-index: 1000; /* Higher z-index */
+    z-index: 1000;
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 24px 20px;
     box-sizing: border-box;
     flex-shrink: 0;
-    overflow-y: auto; /* Enable scroll for short screens */
-
-    animation: slideInLeft 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    overflow-y: auto;
+    font-family: "Outfit", "Kanit", sans-serif;
+    animation: slideInLeft 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 /* Scrollbar styling for sidebar */
@@ -80,20 +54,211 @@
     background: transparent;
 }
 .sidebar::-webkit-scrollbar-thumb {
-    background: rgba(167, 134, 255, 0.3);
-    border-radius: 2px;
+    background: rgba(167, 134, 255, 0.2);
+    border-radius: 10px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(167, 134, 255, 0.5);
 }
 
-/* Handle layout on very short screens */
-@media (max-height: 500px) {
-    .sidebar {
-        padding: 10px;
-    }
-    .logo h2 { font-size: 1.2rem; }
-    .sidebar-footer { padding: 10px 0; }
+/* ===== Logo ===== */
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    animation: fadeInUp 0.5s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
-/* Handle layout on small devices (already partially in other files but let's centralize) */
+.logo-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 126, 179, 0.2) 0%, rgba(167, 134, 255, 0.2) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: #a786ff;
+    box-shadow: 0 4px 15px rgba(167, 134, 255, 0.15);
+    border: 1px solid rgba(167, 134, 255, 0.3);
+}
+
+/* Fallback for existing EJS files */
+.logo h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #fff 0%, #d0c3f1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.5px;
+}
+
+.logo span {
+    font-size: 0.75rem;
+    color: #ff7eb3;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ===== Menu Links ===== */
+.menu {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.menu-section {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.3);
+    margin: 16px 0 8px 12px;
+    font-weight: 600;
+}
+
+.menu a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: #a09eb5;
+    border-radius: 12px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-size: 0.95rem;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeInUp 0.4s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Support existing EJS markup lacking icons/spans */
+.menu a i {
+    font-size: 1.1rem;
+    width: 20px;
+    text-align: center;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.menu a span {
+    flex: 1;
+    white-space: nowrap;
+}
+
+/* Active State */
+.menu a.active {
+    background: linear-gradient(90deg, rgba(167, 134, 255, 0.15) 0%, rgba(167, 134, 255, 0) 100%);
+    color: #fff !important;
+    border-left: 3px solid #a786ff;
+    border-radius: 4px 12px 12px 4px;
+    font-weight: 600;
+}
+
+.menu a.active i {
+    color: #a786ff;
+    filter: drop-shadow(0 0 8px rgba(167, 134, 255, 0.6));
+}
+
+/* Hover State */
+.menu a:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    transform: translateX(4px);
+}
+
+.menu a:hover i {
+    transform: scale(1.15) rotate(-5deg);
+    color: #ff7eb3;
+}
+
+/* ===== Sidebar Footer ===== */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a786ff 0%, #ff7eb3 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    box-shadow: 0 4px 10px rgba(167, 134, 255, 0.3);
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.user-role {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* ===== Logout Button ===== */
+.btn-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    color: #ff7eb3;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 12px;
+    background: rgba(255, 126, 179, 0.1);
+    border: 1px solid rgba(255, 126, 179, 0.2);
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background: #ff7eb3;
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 126, 179, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Main Content Adjustment */
+.main-content, .content-area {
+    margin-left: 260px !important;
+}
+
+/* Responsive */
 @media (max-width: 992px) {
     .sidebar {
         transform: translateX(-100%);
@@ -102,106 +267,7 @@
     .sidebar.active {
         transform: translateX(0);
     }
-}
-
-/* ===== Logo ===== */
-.logo {
-    margin-bottom: 2rem;
-    animation: fadeInUp 0.5s 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-}
-
-.logo h2 {
-    font-size: 1.5rem;
-    background: linear-gradient(135deg, #ff7eb3 0%, #a786ff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-/* ===== Menu Links ===== */
-.menu {
-    flex: 1;
-}
-
-.menu a {
-    display: flex;
-    align-items: center;
-    padding: 0.8rem 1rem;
-    text-decoration: none;
-    color: #b0a8ba;
-    margin-bottom: 8px;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    font-size: 0.95rem;
-
-    opacity: 0;
-    animation: fadeInUp 0.4s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-}
-
-/* ปุ่มที่ถูกเลือก (Active) - คุมธีม Gradient ชมพู/ม่วง แต่ไม่เรืองแสงเกินไป */
-.menu a.active {
-    background: linear-gradient(90deg, rgba(255, 126, 179, 0.85), rgba(167, 134, 255, 0.85));
-    color: white !important;
-    box-shadow: 0 4px 10px rgba(167, 134, 255, 0.2);
-    animation: fadeInUp 0.4s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    opacity: 1 !important;
-}
-
-.menu a:hover:not(.active) {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: translateX(5px);
-    color: white;
-}
-
-
-.logo span {
-    display: block;
-    margin-top: 5px;
-    color: #aaa9a9;
-}
-
-/* ===== Logout Button ===== */
-.btn-logout {
-    color: #e94560;
-    text-decoration: none;
-    font-size: 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px 15px;
-    border: 1px solid #e94560;
-    border-radius: 5px;
-    transition: all 0.3s;
-}
-
-.btn-logout:hover {
-    background-color: #e94560;
-    color: white;
-}
-
-/* ป้องกันไฟล์ CSS อื่น (เช่น sale_pr.css) มาทำให้ไอคอนพัง */
-.btn-logout i {
-    padding: 0 !important;
-    margin: 0 !important;
-    font-size: inherit !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-}
-
-/* Sidebar Footer & User Info */
-.sidebar-footer {
-    margin-top: auto;
-    padding: 20px 0;
-    text-align: center;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.user-info {
-    color: #a0a0b5;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-}
-
-.user-info i {
-    margin-right: 5px;
+    .main-content, .content-area {
+        margin-left: 0 !important;
+    }
 }

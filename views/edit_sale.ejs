@@ -18,45 +18,7 @@
 </head>
 
 <body>
-    <aside class="sidebar">
-        <div class="logo">
-            <h2>ระบบ ERP</h2>
-            <span>ระดับจงกร</span><br>
-        </div>
-
-        <nav class="menu">
-            <a href="<%= baseUrl %>/">Dashboard</a>
-            <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
-      <a href="<%= baseUrl %>/add_sale">เพิ่มออเดอร์</a>
-      <% } %>
-      <% if (!user || !user.role || user.role === 'admin' || user.role === 'sales') { %>
-      <a href="<%= baseUrl %>/sale_pr" class="active">เสนอขาย</a>
-            <a href="<%= baseUrl %>/sale_so">Sale SO</a>
-      <% } %>
-            <% if (!user || !user.role || user.role === 'admin' || user.role === 'procurement') { %>
-      <a href="<%= baseUrl %>/precher_pr">เสนอซื้อ</a>
-            <a href="<%= baseUrl %>/purchase_order">Purchase PO</a>
-            <% } %>
-      <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
-      <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
-      <% } %>
-            <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
-            <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
-            <hr style="border-color: #333; margin: 10px 0;">
-            <a href="<%= baseUrl %>/audit"><i class="fas fa-history"></i> ประวัติใช้งาน</a>
-            <% } %>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="user-info">
-        <i class="fas fa-user-circle"></i>
-        <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
-        <br><small style="color: #ff7eb3; font-size: 0.75rem;">Role: <%= (typeof user !=='undefined' && user && user.role) ? user.role.toUpperCase() : 'USER' %></small>
-      </div>
-            <a href="<%= baseUrl %>/logout" class="btn-logout">
-                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
-            </a>
-        </div>
-    </aside>
+    <%- include('partials/sidebar') %>
     <main class="main-content">
 
         <% if (order && order.length> 0) { %>
@@ -183,10 +145,10 @@
                                                 <input type="number" class="item-qty" min="0" step="any" value="<%= row['จำนวน'] %>">
                                             </td>
                                             <td><%= row['หน่วย'] %></td>
-                                            <td class="text-right"><%= Number(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(String(row['ภาษี'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(String(row['ยอดรวม'] || (parseFloat(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')) + parseFloat(String(row['ภาษี'] || 0).replace(/,/g, ''))) || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['ภาษี'] || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['ยอดรวม'] || (parseFloat(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')) + parseFloat(String(row['ภาษี'] || 0).replace(/,/g, ''))) || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                         </tr>
                                     <% }) %>
                                 <% } %>
@@ -324,15 +286,19 @@
                 const productCode = row.getAttribute('data-product');
                 
                 if (row.style.display !== 'none' && qty > 0) {
+                    const priceText = row.cells[6].innerText.replace(/,/g, '');
+                    const rowPrice = Math.max(0, parseFloat(priceText) || 0);
                     const productInfo = allProducts.find(p => p['รหัส'] === productCode);
-                    if (productInfo) {
-                        finalItems.push({
-                            ...productInfo,
-                            'ราคาขาย': Math.max(0, parseFloat(productInfo['ราคาขาย']) || 0),
-                            'อัตราภาษีขาย': Math.max(0, parseFloat((productInfo['อัตราภาษีขาย'] || '0').toString().replace('%', '')) || 0),
-                            quantity: qty
-                        });
-                    }
+
+                    finalItems.push({
+                        'รหัส': productCode,
+                        'ชื่อ': row.cells[2].innerText,
+                        'ชื่อจำเพราะ': row.cells[3].innerText,
+                        'หน่วย': row.cells[5].innerText,
+                        'ราคาขาย': rowPrice,
+                        'อัตราภาษีขาย': productInfo ? Math.max(0, parseFloat((productInfo['อัตราภาษีขาย'] || '0').toString().replace('%', '')) || 0) : 0,
+                        quantity: qty
+                    });
                 }
             });
 
@@ -431,20 +397,20 @@
                         const detail = row.cells[3].innerText.trim();
                         const unit = row.cells[5].innerText.trim();
                         const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
-                        const vat = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
-                        const total = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                        const amount = total - vat; // Calculate amount since column is removed
+                        const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
+                        const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                        const total = parseFloat(row.cells[9].innerText.replace(/,/g, '')) || 0;
                         
                         itemsObject[sku] = {
                             'sku': sku,
                             'productName': productName,
+                            'info': detail,
                             'qty': qty,
-                            'unitPrice': Number(unitPrice.toFixed(2)),
-                            'total': Number(amount.toFixed(2)),
                             'unit': unit,
-                            'detail': detail,
-                            'vatbuy': Number(vat.toFixed(2)),
-                            'vatshell': 0
+                            'unitPrice': Number(unitPrice.toFixed(2)),
+                            'amount': Number(amount.toFixed(2)),
+                            'vat': Number(vat.toFixed(2)),
+                            'total': Number(total.toFixed(2))
                         };
                         
                         totalAmount += amount;
@@ -540,17 +506,16 @@
             });
 
             try {
-                const response = await fetch('/api/generate-pdf-link', {
+                const response = await fetch('/api/generate-po-pdf', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
                 const contentType = response.headers.get('content-type');
-                let result;
 
                 if (contentType && contentType.includes('application/json')) {
-                    result = await response.json();
+                    const result = await response.json();
                     if (!response.ok) {
                         throw new Error(result.error || result.detail || 'PDF Generation API returned an error');
                     }
@@ -561,6 +526,12 @@
                     } else {
                         throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ (API ตอบกลับมาสำเร็จแต่ไม่มี pdf_link)');
                     }
+                } else if (contentType && contentType.includes('application/pdf')) {
+                    const blob = await response.blob();
+                    const pdfUrl = URL.createObjectURL(blob);
+                    window.open(pdfUrl, '_blank');
+                    Swal.close();
+                    Toast.fire({ icon: 'success', title: 'สร้าง PDF สำเร็จ' });
                 } else {
                     const errorText = await response.text();
                     console.error("Non-JSON error from API:", errorText);

@@ -86,25 +86,29 @@ function recalculateTotals() {
         var productCode = row.getAttribute('data-product');
         var qtyInput = row.querySelector('.item-qty');
         var qty = parseFloat(qtyInput.value) || 0;
-        
+
         if (qty > 0) itemCount++;
 
-        var productInfo = allProducts.find(p => p['รหัส'] === productCode);
-        if (productInfo) {
-            var price = Math.max(0, parseFloat(productInfo['ราคาซื้อ']) || 0);
-            var amount = price * qty;
-            var taxRateStr = (productInfo['อัตราภาษีซื้อ'] || "0").toString().replace('%', '');
-            var taxRate = Math.max(0, parseFloat(taxRateStr) || 0);
-            var tax = amount * (taxRate / 100);
-            var total = amount + tax;
+        var priceText = row.cells[6].textContent.replace(/,/g, '');     
+        var price = Math.max(0, parseFloat(priceText) || 0);
 
-            // Update row cells
-            row.cells[7].textContent = amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            row.cells[8].textContent = tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            row.cells[9].textContent = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            
-            grandTotal += total;
+        var productInfo = allProducts.find(p => p['รหัส'] === productCode);
+        var taxRate = 0;
+        if (productInfo) {
+            var taxRateStr = (productInfo['อัตราภาษีซื้อ'] || "0").toString().replace('%', '');
+            taxRate = Math.max(0, parseFloat(taxRateStr) || 0);
         }
+
+        var amount = price * qty;
+        var tax = amount * (taxRate / 100);
+        var total = amount + tax;
+
+        // Update row cells
+        if (row.cells[7]) row.cells[7].textContent = amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});     
+        if (row.cells[8]) row.cells[8].textContent = tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});        
+        if (row.cells[9]) row.cells[9].textContent = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});      
+
+        grandTotal += total;
     });
 
     // Update Summary Cards

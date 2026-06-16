@@ -19,46 +19,7 @@
 
 <body>
 
-  <aside class="sidebar">
-    <div class="logo">
-      <h2>ระบบ ERP</h2>
-      <span>ระดับจัดการ</span><br>
-    </div>
-
-    <nav class="menu">
-      <a href="<%= baseUrl %>/">Dashboard</a>
-      <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
-      <a href="<%= baseUrl %>/add_sale">เพิ่มออเดอร์</a>
-      <% } %>
-      <% if (!user || !user.role || user.role === 'admin' || user.role === 'sales') { %>
-      <a href="<%= baseUrl %>/sale_pr">เสนอขาย</a>
-      <a href="<%= baseUrl %>/sale_so">Sale SO</a>
-      <% } %>
-      <% if (!user || !user.role || user.role === 'admin' || user.role === 'procurement') { %>
-      <a href="<%= baseUrl %>/precher_pr">เสนอซื้อ</a>
-      <a href="<%= baseUrl %>/purchase_order" class="active">Purchase PO</a>
-      <% } %>
-      <% if (!user || !user.role || ['admin', 'sales', 'procurement'].includes(user.role)) { %>
-      <a href="<%= baseUrl %>/inventory">คลังสินค้า</a>
-      <% } %>
-      <a href="<%= baseUrl %>/ai_chat"> AI Assistant</a>
-            <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
-            <hr style="border-color: #333; margin: 10px 0;">
-            <a href="<%= baseUrl %>/audit"><i class="fas fa-history"></i> ประวัติใช้งาน</a>
-            <% } %>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="user-info">
-        <i class="fas fa-user-circle"></i>
-        <%= (typeof user !=='undefined' && user) ? user['ชื่อpic'] : 'Unknown' %>
-        <br><small style="color: #ff7eb3; font-size: 0.75rem;">Role: <%= (typeof user !=='undefined' && user && user.role) ? user.role.toUpperCase() : 'USER' %></small>
-      </div>
-      <a href="<%= baseUrl %>/logout" class="btn-logout">
-        <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
-      </a>
-    </div>
-  </aside>
+  <%- include('partials/sidebar') %>
 
   <main>
     <h1>

@@ -52,10 +52,10 @@ module.exports = (dependencies) => {
     // Proxy สำหรับสร้าง PO PDF (เพื่อแก้ปัญหา CORS)
     router.post('/api/generate-po-pdf', async (req, res) => {
         try {
-            console.log("[DEBUG] Requesting PO PDF from Python...");
-            const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf/po`, {
+            console.log("[DEBUG] Requesting PO PDF from external API...");
+            const response = await fetch(`https://pdf.thanadon.click/api/generate-pdf/po`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },        
                 body: JSON.stringify(req.body)
             });
             
@@ -186,11 +186,10 @@ module.exports = (dependencies) => {
     // 3. ส่งข้อมูลไปให้ Python สร้างลิงก์ PDF ถาวร
     router.post('/api/generate-pdf-link', async (req, res) => {
         try {
-            const template = req.body.template || 'index';
-            console.log(`[DEBUG] Requesting PDF Link (${template}) from Python...`);
-            const response = await fetch(`${PYTHON_API_BASE}/api/generate-pdf-link/${template}`, {
+            console.log(`[DEBUG] Requesting PDF Link from external API...`);
+            const response = await fetch(`https://pdf.thanadon.click/api/generate-pdf/po`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },        
                 body: JSON.stringify(req.body)
             });
             
