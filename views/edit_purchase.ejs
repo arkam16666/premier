@@ -330,18 +330,22 @@
                     const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
                     if (qty > 0) {
                         const sku = row.cells[1].innerText.trim();
+                        // Grab raw values directly from the table cells, stripping commas
+                        const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
                         const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
                         const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                        const total = parseFloat(row.cells[9].innerText.replace(/,/g, '')) || 0;
+
                         itemsObject[sku] = {
                             'sku': sku,
                             'productName': row.cells[2].innerText,
                             'info': row.cells[3].innerText,
                             'qty': qty,
                             'unit': row.cells[5].innerText,
-                            'unitPrice': parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0,
+                            'unitPrice': unitPrice,
                             'amount': amount,
                             'vat': vat,
-                            'total': amount + vat
+                            'total': total
                         };
                     }
                 }

@@ -7,7 +7,7 @@
 #loading-overlay {
     position: fixed;
     top: 0;
-    left: 200px; /* Sidebar width */
+    left: 260px; /* Sidebar width */
     right: 0;
     bottom: 0;
     background: rgba(15, 10, 26, 0.8);
@@ -238,7 +238,7 @@ main {
     color: #fff;
     outline: none;
     box-sizing: border-box;
-    font-family: 'Sarabun', sans-serif;
+    font-family: 'Kanit', sans-serif;
     font-size: 0.9rem;
 }
 
@@ -260,15 +260,6 @@ main {
     gap: 10px;
 }
 
-.sidebar-footer {
-    margin-top: auto;
-    padding: 20px 0;
-    text-align: center;
-    border-top: 1px solid rgba(255,255,255,0.1);
-}
 
-.user-info {
-    color: #a0a0b5;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-}
+
+

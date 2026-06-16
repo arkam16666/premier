@@ -175,16 +175,38 @@
             throw new Error('ไม่พบรายการสินค้าสำหรับ ID นี้');
         }
 
-        const itemsArray = subData.items.map((item, index) => {
-            const itemObj = {};
-            itemObj[`item${index + 1}`] = {
-                'sku': item['สินค้า'] || '',
+        const itemsObject = {};
+        let totalAmount = 0;
+        let totalVat = 0;
+        let grandTotal = 0;
+
+        subData.items.forEach((item, index) => {
+            const sku = item['สินค้า'] || `item${index + 1}`;
+            
+            // Clean up string values by removing commas and convert to numbers
+            const qty = Number(parseFloat(String(item['จำนวน'] || '0').replace(/,/g, '')) || 0);
+            const unitPrice = Number(parseFloat(String(item['ราคาต่อหน่วย'] || item['ราคาขาย'] || '0').replace(/,/g, '')) || 0);
+            
+            // Just take exactly what is in the data, do NOT recalculate.
+            const amount = Number(parseFloat(String(item['จำนวนเงิน'] || '0').replace(/,/g, '')) || 0);
+            const vat = Number(parseFloat(String(item['ภาษี'] || '0').replace(/,/g, '')) || 0);
+            const total = Number(parseFloat(String(item['ยอดรวม'] || item['รวม'] || '0').replace(/,/g, '')) || 0);
+
+            itemsObject[sku] = {
+                'sku': sku,
                 'productName': item['ชื่อสินค้า'] || '',
-                'qty': (item['จำนวน'] || '0').toString(),
-                'unitPrice': (item['ราคาต่อหน่วย'] || '0').toString(),
-                'total': (item['รวม'] || item['จำนวนเงิน'] || '0').toString()
+                'info': item['ข้อมูลจำเพราะ'] || '',
+                'qty': qty,
+                'unit': item['หน่วย'] || '',
+                'unitPrice': unitPrice,
+                'amount': amount,
+                'vat': vat,
+                'total': total
             };
-            return itemObj;
+
+            totalAmount += amount;
+            totalVat += vat;
+            grandTotal += total;
         });
 
         // ใช้ "วันที่แก้ไขล่าสุด" (วันที่กดส่ง) ถ้ามี ถ้าไม่มีให้ใช้วันที่ปัจจุบัน
@@ -214,26 +236,36 @@
             picName: preparedByName,
             picDepartment: '', 
             section: '',
-            grandTotal: Number(subData.items.reduce((sum, item) => sum + (parseFloat(item['รวม'] || item['จำนวนเงิน']) || 0), 0).toFixed(2)),
-            vat: Number(subData.items.reduce((sum, item) => sum + (parseFloat(item['ภาษี']) || 0), 0).toFixed(2)),
-            items: itemsArray
+            totalAmount: Number(totalAmount.toFixed(2)),
+            vat: Number(totalVat.toFixed(2)),
+            grandTotal: Number(grandTotal.toFixed(2)),
+            items: [itemsObject]
         };
 
-        const printRes = await fetch('/api/generate-pdf-link', {
+        const printRes = await fetch('/api/generate-po-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
-        const result = await printRes.json();
+        const contentType = printRes.headers.get('content-type');
 
-        if (!printRes.ok) throw new Error(result.error || 'ไม่สามารถสร้าง PDF ได้');
-
-        if (result.pdf_link) {
-            window.open(result.pdf_link, '_blank');
+        if (contentType && contentType.includes('application/json')) {
+            const result = await printRes.json();
+            if (result.pdf_link) {
+                window.open(result.pdf_link, '_blank');
+                Swal.close();
+            } else {
+                throw new Error(result.error || 'ไม่สามารถสร้าง PDF ได้');
+            }
+        } else if (contentType && contentType.includes('application/pdf')) {
+            const blob = await printRes.blob();
+            const pdfUrl = URL.createObjectURL(blob);
+            window.open(pdfUrl, '_blank');
             Swal.close();
         } else {
-            throw new Error('ไม่ได้รับลิงก์ PDF จากระบบ');
+            const errorText = await printRes.text();
+            throw new Error(errorText || 'ไม่สามารถสร้าง PDF ได้');
         }
 
         } catch (err) {

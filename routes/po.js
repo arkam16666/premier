@@ -140,8 +140,9 @@ module.exports = (dependencies) => {
     });
 
     router.post("/api/save_changes_po", async (req, res) => {
-        const { id, finalItems, orderChanges } = req.body;
+        let { id, finalItems, orderChanges } = req.body;
         if (!id) return res.status(400).json({ error: "ต้องระบุ id" });
+        id = String(id).toUpperCase();
         try {
             const sheetName = "sub_precher_po";
             const result = await sheetsWrite.spreadsheets.values.get({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A1:AZ` });

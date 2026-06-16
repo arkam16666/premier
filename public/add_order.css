@@ -1,4 +1,8 @@
 /* Reset and Core Layout */
+* {
+    font-family: 'Kanit', sans-serif !important;
+}
+
 .add-sale-page {
     background-color: #0c0816;
     background-image: 
@@ -9,7 +13,7 @@
 }
 
 .content-area {
-    margin-left: 200px; /* Sidebar width */
+    margin-left: 260px; /* Sidebar width */
     flex: 1;
     min-height: 100vh;
     display: flex;
@@ -197,7 +201,7 @@
     border: none;
     padding: 20px;
     color: #fff;
-    font-family: 'Sarabun', sans-serif;
+    font-family: 'Kanit', sans-serif;
     font-size: 1.1rem;
     line-height: 1.6;
     resize: none;

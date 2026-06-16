@@ -1,4 +1,5 @@
 * {
+    font-family: 'Kanit', sans-serif !important;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -12,10 +13,7 @@ body {
     background-color: #0f0a1a;
 }
 
-.menu a:hover:not(.active) {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: translateX(5px);
-}
+
 
 /* จัดการพื้นที่หลัก */
 main {
@@ -24,7 +22,7 @@ main {
     /* สีพื้นหลังให้เข้ากับโทนเว็บ */
     min-height: 100vh;
     color: white;
-    margin-left: 200px;
+    margin-left: 260px;
     width: calc(100% - 200px);
     /* เลื่อนเนื้อหาออกมาไม่ให้ทับ sidebar ที่ fixed */
 
@@ -347,7 +345,7 @@ td[colspan="100%"] {
     gap: 8px;
     white-space: nowrap;
     text-decoration: none;
-    font-family: 'Sarabun', sans-serif;
+    font-family: 'Kanit', sans-serif;
 }
 
 .btn-search {
@@ -452,18 +450,9 @@ a i {
     text-align: center !important;
 }
 
-.sidebar-footer {
-    margin-top: auto;
-    padding: 20px 0;
-    text-align: center;
-    border-top: 1px solid rgba(255,255,255,0.1);
-}
 
-.user-info {
-    color: #a0a0b5;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
-}
+
+
 
 .main-content {
     padding: 20px;

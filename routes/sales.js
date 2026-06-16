@@ -209,29 +209,12 @@ module.exports = (dependencies) => {
             // Map the specific new_Product columns to match the UI table expectations
             const newProductData = newProductRaw.map(row => {
                 const qty = parseFloat(row['จำกัดจำนวน'] || row['จำนวน'] || 1) || 1;
-                let unitPrice = parseFloat(row['ราคาต่อหน่วย'] || 0); // Assume pre-tax
-                let totalWithVat = parseFloat(row['ราคา'] || 0); // This is TOTAL including VAT
-
-                let amount, tax, total;
-
-                if (totalWithVat > 0) {
-                    // Case 1: The 'ราคา' (total w/ VAT) column is the source of truth.
-                    total = Math.max(0, totalWithVat);
-                    amount = total / 1.07; // Calculate pre-tax amount
-                    tax = total - amount;      // Calculate tax from the difference
-                    unitPrice = (qty > 0) ? (amount / qty) : 0; // Calculate pre-tax unit price
-                } else if (unitPrice > 0) {
-                    // Case 2: Only 'ราคาต่อหน่วย' (pre-tax unit price) is provided.
-                    amount = Math.max(0, unitPrice) * qty;
-                    tax = amount * 0.07;
-                    total = amount + tax;
-                } else {
-                    // Case 3: No price info, default to 0.
-                    amount = 0;
-                    tax = 0;
-                    total = 0;
-                    unitPrice = 0;
-                }
+                // Use ราคาต่อหน่วย or ราคา as the base unit price
+                let unitPrice = parseFloat(row['ราคาต่อหน่วย'] || row['ราคา'] || 0); 
+                
+                let amount = Math.max(0, unitPrice) * qty;
+                let tax = amount * 0.07; // Assuming 7% VAT
+                let total = amount + tax;
                 
                 return {
                     'สินค้า': row['รหัส'] || row['id'] || '',               // Use id as SKU
@@ -450,8 +433,9 @@ module.exports = (dependencies) => {
 
     // --- Common APIs for Sale/SO ---
     router.post("/api/save_changes", async (req, res) => {
-        const { id, finalItems, orderChanges } = req.body;
+        let { id, finalItems, orderChanges } = req.body;
         if (!id) return res.status(400).json({ error: "ต้องระบุ id" });
+        id = String(id).toUpperCase();
         try {
             const sheetName = "sub_sales_pr";
             const result = await sheetsWrite.spreadsheets.values.get({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A1:AZ` });
@@ -515,8 +499,9 @@ module.exports = (dependencies) => {
     });
 
     router.post("/api/save_changes_so", async (req, res) => {
-        const { id, finalItems, orderChanges } = req.body;
+        let { id, finalItems, orderChanges } = req.body;
         if (!id) return res.status(400).json({ error: "ต้องระบุ id" });
+        id = String(id).toUpperCase();
         try {
             const sheetName = "sub_sales_so";
             const result = await sheetsWrite.spreadsheets.values.get({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A1:AZ` });

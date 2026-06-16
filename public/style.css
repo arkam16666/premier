@@ -1,5 +1,5 @@
 * {
-    font-family: "Kanit", "Sarabun", sans-serif;
+    font-family: "Kanit", sans-serif !important;
     font-weight: 500;
     font-style: normal;
     margin: 0;
@@ -20,7 +20,7 @@ body {
 
 /* Main Content */
 .main-content {
-    margin-left: 200px;
+    margin-left: 260px;
     flex-grow: 1;
     padding: 40px;
     animation: fadeIn 0.8s ease-out;

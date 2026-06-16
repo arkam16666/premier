@@ -126,7 +126,6 @@
                                     <th class="text-center">จำนวน</th>
                                     <th>หน่วย</th>
                                     <th class="text-right">ราคาต่อหน่วย</th>
-                                    <th class="text-right">จำนวนเงิน</th>
                                     <th class="text-right">ภาษี</th>
                                     <th class="text-right">ยอดรวม</th>
                                 </tr>
@@ -146,9 +145,15 @@
                                             </td>
                                             <td><%= row['หน่วย'] %></td>
                                             <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <% 
+                                                // compute amount = qty * unitPrice, show total without VAT
+                                                const qtyVal = Number(parseFloat(String(row['จำนวน'] || 0).replace(/,/g, '')) || 0);
+                                                const priceVal = Number(parseFloat(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')) || 0);
+                                                const lineAmount = Number((qtyVal * priceVal) || 0);
+                                            %>
+                                            <td class="text-right"><%= lineAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                             <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['ภาษี'] || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(Math.max(0, parseFloat(String(row['ยอดรวม'] || (parseFloat(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')) + parseFloat(String(row['ภาษี'] || 0).replace(/,/g, ''))) || 0).replace(/,/g, '')) || 0)).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= lineAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                         </tr>
                                     <% }) %>
                                 <% } %>
@@ -167,10 +172,14 @@
                                                 <input type="number" class="item-qty" min="0" step="any" value="<%= row['จำนวน'] %>">
                                             </td>
                                             <td><%= row['หน่วย'] %></td>
-                                            <td class="text-right"><%= Number(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(String(row['จำนวนเงิน'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(String(row['ภาษี'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                            <td class="text-right"><%= Number(String(row['ยอดรวม'] || 0).replace(/,/g, '')).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <% 
+                                                const npQty = Number(parseFloat(String(row['จำนวน'] || 0).replace(/,/g, '')) || 0);
+                                                const npPrice = Number(parseFloat(String(row['ราคาต่อหน่วย'] || 0).replace(/,/g, '')) || 0);
+                                                const npAmount = Number((npQty * npPrice) || 0);
+                                            %>
+                                            <td class="text-right"><%= npPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= Number(String(row['ภาษี'] || 0).replace(/,/g, '') || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                            <td class="text-right"><%= npAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                         </tr>
                                     <% }) %>
                                 <% } %>
@@ -340,6 +349,13 @@
             });
 
             try {
+                // Log payload for debugging
+                console.log('SAVE payload', {
+                    id: currentEditId,
+                    finalItems: finalItems,
+                    orderChanges: pendingOrderChanges
+                });
+
                 const response = await fetch('/api/save_changes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -396,10 +412,14 @@
                         const productName = row.cells[2].innerText.trim();
                         const detail = row.cells[3].innerText.trim();
                         const unit = row.cells[5].innerText.trim();
+                        
+                        // Grab raw values directly from the table cells, stripping commas
                         const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
-                        const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
-                        const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                        const total = parseFloat(row.cells[9].innerText.replace(/,/g, '')) || 0;
+                        // Treat unitPrice as VAT-exclusive: compute line amount by qty * unitPrice
+                        const amount = parseFloat((unitPrice * qty).toFixed(2)) || 0;
+                        // Preserve displayed per-item VAT (for information) but do not add it to per-row total
+                        const displayedVat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                        const total = amount; // per-row total excludes VAT
                         
                         itemsObject[sku] = {
                             'sku': sku,
@@ -407,15 +427,15 @@
                             'info': detail,
                             'qty': qty,
                             'unit': unit,
-                            'unitPrice': Number(unitPrice.toFixed(2)),
-                            'amount': Number(amount.toFixed(2)),
-                            'vat': Number(vat.toFixed(2)),
-                            'total': Number(total.toFixed(2))
+                            'unitPrice': unitPrice,
+                            'amount': amount,
+                            'vat': displayedVat,
+                            'total': total
                         };
                         
                         totalAmount += amount;
-                        totalVat += vat;
-                        grandTotal += total;
+                        // totalVat will be computed after summing all amounts (global 7% VAT)
+                        // grandTotal will be computed after VAT calculation
                     }
                 }
             });
@@ -470,6 +490,10 @@
             const year = d.getFullYear();
             const formattedDate = `${year}-${month}-${day}`;
             
+            const vatRate = 0.07; // 7% VAT applied to subtotal
+            totalVat = parseFloat((totalAmount * vatRate).toFixed(2));
+            grandTotal = parseFloat((totalAmount + totalVat).toFixed(2));
+
             const payload = {
                 id: currentEditId,
                 orderDate: formattedDate,
@@ -506,6 +530,9 @@
             });
 
             try {
+                // Log payload for debugging
+                console.log('PRINT payload', payload);
+
                 const response = await fetch('/api/generate-po-pdf', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
