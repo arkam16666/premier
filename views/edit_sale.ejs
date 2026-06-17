@@ -129,8 +129,8 @@
                                         <th class="text-center">จำนวน</th>
                                         <th>หน่วย</th>
                                         <th class="text-right">ราคาต่อหน่วย</th>
+                                        <th class="text-right">จำนวนเงิน</th>
                                         <th class="text-right">ภาษี</th>
-                                        <th class="text-right">ยอดรวม</th>
                                     </tr>
                                 </thead>
                                 <tbody id="salePrBody">
@@ -175,10 +175,6 @@
                                                         <%= Number(Math.max(0, parseFloat(String(row['ภาษี'] ||
                                                             0).replace(/,/g, '' )) || 0)).toLocaleString('en-US',
                                                             {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
-                                                    </td>
-                                                    <td class="text-right">
-                                                        <%= lineAmount.toLocaleString('en-US', {minimumFractionDigits:
-                                                            2, maximumFractionDigits: 2}) %>
                                                     </td>
                                             </tr>
                                             <% }) %>
@@ -454,7 +450,7 @@
                     async function printPDF() {
                         const rows = document.querySelectorAll('#salePrBody .item-row');
 
-                        const itemsObject = {};
+                        const itemsArray = [];
                         let hasItems = false;
                         let totalAmount = 0;
                         let totalVat = 0;
@@ -467,28 +463,19 @@
                                     hasItems = true;
                                     const sku = row.cells[1].innerText.trim().replace(' ใหม่', '');
                                     const productName = row.cells[2].innerText.trim();
-                                    const detail = row.cells[3].innerText.trim();
-                                    const unit = row.cells[5].innerText.trim();
 
                                     // Grab raw values directly from the table cells, stripping commas
                                     const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
-                                    // Treat unitPrice as VAT-exclusive: compute line amount by qty * unitPrice
                                     const amount = parseFloat((unitPrice * qty).toFixed(2)) || 0;
-                                    // Preserve displayed per-item VAT (for information) but do not add it to per-row total
-                                    const displayedVat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                                    const total = amount; // per-row total excludes VAT
+                                    const total = amount;
 
-                                    itemsObject[sku] = {
+                                    itemsArray.push({
                                         'sku': sku,
                                         'productName': productName,
-                                        'info': detail,
-                                        'qty': qty,
-                                        'unit': unit,
-                                        'unitPrice': unitPrice,
-                                        'amount': amount,
-                                        'vat': displayedVat,
-                                        'total': total
-                                    };
+                                        'qty': String(qty),
+                                        'unitPrice': String(unitPrice),
+                                        'total': String(total)
+                                    });
 
                                     totalAmount += amount;
                                     // totalVat will be computed after summing all amounts (global 7% VAT)
@@ -571,7 +558,7 @@
                             vat: Number(totalVat.toFixed(2)),
                             picName: currentUser['ชื่อpic'] || headerData['PIC'] || '',
                             picDepartment: currentUser['แผนก'] || 'Sales & Marketing Dept.',
-                            items: [itemsObject]
+                            items: itemsArray
                         };
 
                         // Show loading

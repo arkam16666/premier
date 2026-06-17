@@ -46,21 +46,37 @@ module.exports = (dependencies) => {
         if (!userMessage) return res.status(400).json({ error: 'Message is required' });
 
         try {
-            const [stock, product, salesPr, subSalesPr, salesSo, subSalesSo, employees] = await Promise.all([
+            const [
+                stock, product, employees, customers,
+                salesPr, subSalesPr, salesSo, subSalesSo,
+                precherPr, subPrecherPr, precherPo, subPrecherPo
+            ] = await Promise.all([
                 getsheet(null, 'stock'),
                 getsheet(null, 'product'),
+                getsheet(null, 'empolyee'),
+                getsheet(null, 'customer'),
                 getsheet(null, 'Sale_pr'),
                 getsheet(null, 'sub_sales_pr'),
                 getsheet(null, 'sales_so'),
                 getsheet(null, 'sub_sales_so'),
-                getsheet(null, 'empolyee')
+                getsheet(null, 'precher_pr'),
+                getsheet(null, 'sub_precher_pr'),
+                getsheet(null, 'precher_po'),
+                getsheet(null, 'sub_precher_po')
             ]);
 
             const contextData = {
-                inventory_summary: stock.map(s => ({ รหัส: s['รหัส'], ชื่อ: s['ชื่อ'], จำนวน: s['จำนวน'], หน่วย: s['หน่วย'] })),
-                product_catalog: product.map(p => ({ รหัส: p['รหัส'], ชื่อ: p['ชื่อ'], ราคา: p['ราคาขาย'], แบรนด์: p['แบรนด์'] })),
-                sales_proposals: salesPr.map(s => ({ id: s['id'], วันที่: s['วันที่'], ลูกค้า: s['ลูกค้า-ผู้ขาย'], สถานะ: s['สถานะเอกสาร'] })),
-                team: employees.map(({ password, ...rest }) => rest)
+                inventory: stock.map(s => ({ รหัส: s['รหัส'], ชื่อ: s['ชื่อ'], จำนวน: s['จำนวน'], หน่วย: s['หน่วย'] })),
+                products: product.map(p => ({ รหัส: p['รหัส'], ชื่อ: p['ชื่อ'], ราคา: p['ราคาขาย'], แบรนด์: p['แบรนด์'] })),
+                customers: customers.map(c => ({ id: c['id'], ชื่อ: c['ชื่อลูกค้า/บริษัท'], เบอร์โทร: c['โทรศัพท์'] })),
+                sales_proposals: salesPr.map(s => ({ id: s['id'], วันที่: s['วันที่'], ลูกค้า: s['ลูกค้า-ผู้ขาย'], สถานะ: s['สถานะเอกสาร'], ยอดรวม: s['จำนวนเงินรวม'] })),
+                sales_orders: salesSo.map(s => ({ id: s['id'], วันที่: s['วันที่'], ลูกค้า: s['ลูกค้า-ผู้ขาย'], โทร: s['โทรศัพท์'], ยอดรวม: s['จำนวนเงินรวม'] })),
+                purchase_requisitions: precherPr.map(p => ({ id: p['id'], วันที่: p['วันที่'], PIC: p['PIC'], ลูกค้า: p['ลูกค้า-ผู้ขาย'], สถานะ: p['สถานะเอกสาร'], ยอดรวม: p['จำนวนเงินรวม'] })),
+                purchase_orders: precherPo.map(p => ({ id: p['id'], วันที่: p['วันที่'], PIC: p['PIC'], ลูกค้า: p['ลูกค้า-ผู้ขาย'], ยอดรวม: p['จำนวนเงินรวม'] })),
+                team: employees.map(({ password, ...rest }) => rest),
+                // Include sub-items for more "everything" knowledge
+                sales_items: subSalesPr.concat(subSalesSo).map(i => ({ order_id: i['id'], สินค้า: i['ชื่อสินค้า'], จำนวน: i['จำนวน'], ราคา: i['ราคาต่อหน่วย'] })),
+                purchase_items: subPrecherPr.concat(subPrecherPo).map(i => ({ order_id: i['id'], สินค้า: i['ชื่อสินค้า'], จำนวน: i['จำนวน'], ราคา: i['ราคาต่อหน่วย'] }))
             };
 
             let systemPrompt = "";

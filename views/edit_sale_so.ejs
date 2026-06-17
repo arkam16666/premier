@@ -132,7 +132,6 @@
                                         <th class="text-right">ราคาต่อหน่วย</th>
                                         <th class="text-right">จำนวนเงิน</th>
                                         <th class="text-right">ภาษี</th>
-                                        <th class="text-right">จำนวนเงินรวม</th>
                                     </tr>
                                 </thead>
                                 <tbody id="saleSoBody">
@@ -166,9 +165,6 @@
                                                 </td>
                                                 <td class="text-right">
                                                     <%= row['ภาษี'] %>
-                                                </td>
-                                                <td class="item-total text-right">
-                                                    <%= row['จำนวนเงินรวม'] %>
                                                 </td>
                                             </tr>
                                             <% }) } else { %>
@@ -356,46 +352,42 @@
 
                     async function printPDF() {
                         const rows = document.querySelectorAll('#saleSoBody .item-row');
-
-                        const itemsObject = {};
+                        const itemsArray = [];
+                        let hasItems = false;
+                        let totalAmount = 0;
+                        let totalVat = 0;
+                        let grandTotal = 0;
 
                         rows.forEach(row => {
                             if (row.style.display !== 'none') {
                                 const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
                                 if (qty > 0) {
-                                    const sku = row.cells[1].innerText.trim();
+                                    hasItems = true;
+                                    const sku = row.cells[1].innerText.trim().replace(' ใหม่', '');
+                                    const productName = row.cells[2].innerText.trim();
 
-                                    // Find product info from allProducts if available
-                                    const productInfo = allProducts.find(p => (p['รหัส'] || p['สินค้า'] || '').toString().trim() === sku) || {};
+                                    // Grab raw values directly from the table cells, stripping commas
+                                    const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
+                                    const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
+                                    const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                                    const total = amount + vat;
 
-                                    // Determine unit price (prefer product data, fallback to table cell). Strip non-numeric chars.
-                                    const rawUnitFromTable = (row.cells[6].innerText || '').toString();
-                                    const unitPrice = parseFloat((productInfo['ราคาขาย'] || productInfo['ราคาต่อหน่วย'] || rawUnitFromTable).toString().replace(/[^0-9.-]+/g, '')) || 0;
-
-                                    // Calculate amount, VAT and total using product tax rate if available
-                                    const amount = Number((unitPrice * qty).toFixed(2));
-                                    const taxRate = parseFloat((productInfo['อัตราภาษีขาย'] || productInfo['อัตราภาษี'] || '0').toString().replace(/[^0-9.-]+/g, '')) || 0;
-                                    const vat = Number((amount * (taxRate / 100)).toFixed(2));
-                                    // Use amount (pre-VAT) as "total" per request
-                                    const total = amount;
-
-                                    itemsObject[sku] = {
+                                    itemsArray.push({
                                         'sku': sku,
-                                        'productName': row.cells[2].innerText.trim(),
-                                        'info': row.cells[3].innerText.trim(),
-                                        'qty': qty,
-                                        'unit': row.cells[5].innerText.trim(),
-                                        'unitPrice': unitPrice,
-                                        'total': amount,
-                                        'vat': vat,
-                                        'amount': total
-                                    };
+                                        'productName': productName,
+                                        'qty': String(qty),
+                                        'unitPrice': String(unitPrice),
+                                        'total': String(total)
+                                    });
+
+                                    totalAmount += amount;
+                                    totalVat += vat;
+                                    grandTotal += total;
                                 }
                             }
                         });
 
-                        const skuKeys = Object.keys(itemsObject);
-                        if (skuKeys.length === 0) {
+                        if (itemsArray.length === 0) {
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'ไม่มีรายการสินค้า',
@@ -404,16 +396,6 @@
                                 color: '#fff'
                             });
                             return;
-                        }
-
-                        // คำนวณยอดรวม
-                        let totalVat = 0;
-                        let totalNet = 0;   // ยอดรวมไม่รวม VAT
-                        let totalGross = 0; // ยอดรวมรวม VAT
-                        for (const key in itemsObject) {
-                            totalVat += (itemsObject[key].vat || 0);
-                            totalNet += (itemsObject[key].total || 0);   // total = ยอดไม่รวม VAT per item
-                            totalGross += (itemsObject[key].amount || 0); // amount = ยอดรวมรวม VAT per item
                         }
 
                         const headerData = rawSalesData.length > 0 ? rawSalesData[0] : {};
@@ -471,10 +453,10 @@
                             paymentTerms: headerData['ประเภทธุรกรรม'] || '',
                             preparedBy: currentUser['ชื่อpic'] || headerData['PIC'] || '',
                             authorizedBy: '',
-                            totalAmount: Number(totalNet.toFixed(2)),
+                            totalAmount: Number(totalAmount.toFixed(2)),
                             vat: Number(totalVat.toFixed(2)),
-                            grandTotal: Number(totalGross.toFixed(2)),
-                            items: [itemsObject]
+                            grandTotal: Number(grandTotal.toFixed(2)),
+                            items: itemsArray
                         };
                         // Show loading
                         Swal.fire({

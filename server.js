@@ -116,10 +116,10 @@ async function getsheet(id, table) {
         }
 
         if (id) {
-            const searchId = String(id).trim();
+            const searchId = String(id).trim().toUpperCase();
             return data.filter((row) => {
                 const rawRowId = row["id"] || row["ID"] || row["Id"] || row["รหัส"];
-                const rowId = String(rawRowId).trim();
+                const rowId = String(rawRowId).trim().toUpperCase();
                 return rowId === searchId || rowId.endsWith("-" + searchId);
             });
         }
