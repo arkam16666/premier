@@ -574,8 +574,9 @@
                         });
 
                         try {
-                            // Log payload for debugging
-                            console.log('PRINT payload', payload);
+                            // Log payload for debugging beautifully
+                            console.log('%c PDF PAYLOAD ', 'background: #ff7eb3; color: white; font-weight: bold; border-radius: 4px; padding: 2px 5px;');
+                            console.log(JSON.parse(JSON.stringify(payload)));
 
                             const response = await fetch('/api/generate-po-pdf', {
                                 method: 'POST',

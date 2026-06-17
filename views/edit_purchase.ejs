@@ -399,7 +399,7 @@
             const d = new Date();
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
+            const year = d.getFullYear() + 543;
             const formattedDate = `${day}/${month}/${year}`;
 
             const payload = {
@@ -408,7 +408,7 @@
                 grandTotal: Number(grandTotal.toFixed(2)),
                 vat: Number(totalVat.toFixed(2)),
 
-                title: 'ใบสั่งซื้อ',
+                title: 'ใบเสนอซื้อ',
                 title_eng: 'Purchase Requisition',
 
                 customerCode: vendorCode, 
@@ -437,6 +437,10 @@
             });
 
             try {
+                // Log payload for debugging beautifully
+                console.log('%c PDF PAYLOAD ', 'background: #4caf50; color: white; font-weight: bold; border-radius: 4px; padding: 2px 5px;');
+                console.log(JSON.parse(JSON.stringify(payload)));
+
                 const response = await fetch('/api/generate-po-pdf', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

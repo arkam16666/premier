@@ -171,8 +171,8 @@ module.exports = (dependencies) => {
                     const taxRate = Math.max(0, parseFloat((p['อัตราภาษีซื้อ'] || "0").toString().replace('%', '')) || 0);
                     const amount = qty * price;
                     const tax = amount * (taxRate / 100);
-                    const total = amount + tax;
-                    grandTotal += total;
+                    const total = amount; 
+                    grandTotal += (amount + tax); // Change: grandTotal now includes tax
                     return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, total];
                 });
                 await sheetsWrite.spreadsheets.values.append({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A:J`, valueInputOption: "USER_ENTERED", requestBody: { values } });

@@ -370,7 +370,7 @@
                                     const unitPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
                                     const amount = parseFloat(row.cells[7].innerText.replace(/,/g, '')) || 0;
                                     const vat = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
-                                    const total = amount + vat;
+                                    const total = amount; // Change: item total in PDF itemsArray (if used) or grandTotal will follow this
 
                                     itemsArray.push({
                                         'sku': sku,
@@ -382,7 +382,7 @@
 
                                     totalAmount += amount;
                                     totalVat += vat;
-                                    grandTotal += total;
+                                    grandTotal += (amount + vat); // This now includes VAT
                                 }
                             }
                         });
@@ -456,6 +456,8 @@
                             totalAmount: Number(totalAmount.toFixed(2)),
                             vat: Number(totalVat.toFixed(2)),
                             grandTotal: Number(grandTotal.toFixed(2)),
+                            picName: currentUser['ชื่อpic'] || headerData['PIC'] || '',
+                            picDepartment: currentUser['แผนก'] || 'Sales & Marketing Dept.',
                             items: itemsArray
                         };
                         // Show loading
@@ -471,6 +473,10 @@
                         });
 
                         try {
+                            // Log payload for debugging beautifully
+                            console.log('%c PDF PAYLOAD ', 'background: #ff7eb3; color: white; font-weight: bold; border-radius: 4px; padding: 2px 5px;');
+                            console.log(JSON.parse(JSON.stringify(payload)));
+
                             const response = await fetch('/api/generate-po-pdf', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -596,6 +602,10 @@
                     }
                 </script>
                 <script src="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/dynamic_favicon.js"></script>
+</body>
+
+</html>
+<script src="<%= typeof baseUrl !== 'undefined' ? baseUrl : '' %>/dynamic_favicon.js"></script>
 </body>
 
 </html>
