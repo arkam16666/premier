@@ -229,7 +229,10 @@ module.exports = (dependencies) => {
                 };
             });
 
-            let salePrData = mapDataByHeaders(subSalesData, subSaleHeaders);
+            let salePrData = mapDataByHeaders(subSalesData, subSaleHeaders).filter(item => {
+                const sku = (item['สินค้า'] || "").toString().trim().toLowerCase();
+                return !sku.startsWith("orther") && !sku.startsWith("other");
+            });
             let orderData = mapDataByHeaders(salesData, saleHeaders);
             let allProducts = mapDataByHeaders(allProductsRaw, productHeaders);
             
@@ -457,15 +460,109 @@ module.exports = (dependencies) => {
             }
 
             if (finalItems && finalItems.length > 0) {
-                const values = finalItems.map(p => {
-                    const qty = Math.max(0, parseFloat(p.quantity) || 0);
-                    const price = Math.max(0, parseFloat(p['ราคาขาย']) || 0);
-                    const taxRate = Math.max(0, parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0);
-                    const amount = qty * price;
-                    const tax = amount * (taxRate / 100);
-                    return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, amount];
+                // Filter out items that have code (รหัส) starting with 'orther' or 'other'
+                const filteredItems = finalItems.filter(p => {
+                    const code = (p['รหัส'] || "").toString().trim().toLowerCase();
+                    return !code.startsWith("orther") && !code.startsWith("other");
                 });
-                await sheetsWrite.spreadsheets.values.append({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A:J`, valueInputOption: "USER_ENTERED", requestBody: { values } });
+
+                if (filteredItems.length > 0) {
+                    const values = filteredItems.map(p => {
+                        const qty = Math.max(0, parseFloat(p.quantity) || 0);
+                        const price = Math.max(0, parseFloat(p['ราคาขาย']) || 0);
+                        const taxRate = Math.max(0, parseFloat((p['อัตราภาษีขาย'] || "0").toString().replace('%', '')) || 0);
+                        const amount = qty * price;
+                        const tax = amount * (taxRate / 100);
+                        return [id, p['รหัส'] || "", p['ชื่อ'] || "", p['ชื่อจำเพราะ'] || "", qty, p['หน่วย'] || "", price, amount, tax, amount];
+                    });
+                    await sheetsWrite.spreadsheets.values.append({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A:J`, valueInputOption: "USER_ENTERED", requestBody: { values } });
+                }
+            }
+
+            // Load and update new_Product sheet (for 'orther' and 'other' products)
+            try {
+                const newProductSheetName = "new_Product";
+                const newProductResult = await sheetsWrite.spreadsheets.values.get({
+                    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                    range: `${newProductSheetName}!A1:AZ`
+                });
+                const newProductRows = newProductResult.data.values ?? [];
+                if (newProductRows.length > 0) {
+                    const npHeaders = newProductRows[0];
+                    const npIdCol = npHeaders.indexOf("id");
+                    const npSalePrIdCol = npHeaders.indexOf("sale_pr_id");
+                    const npQtyCol = npHeaders.indexOf("จำกัดจำนวน");
+                    const npPriceCol = npHeaders.indexOf("ราคา");
+                    const npUnitPriceCol = npHeaders.indexOf("ราคาต่อหน่วย");
+
+                    if (npIdCol !== -1 && npSalePrIdCol !== -1) {
+                        const spreadsheet = await sheetsWrite.spreadsheets.get({ spreadsheetId: process.env.GOOGLE_SHEET_ID });
+                        const npSheetMeta = spreadsheet.data.sheets.find(s => s.properties.title === newProductSheetName);
+                        
+                        const rowsToDelete = [];
+                        const rowsToUpdate = [];
+
+                        for (let i = 1; i < newProductRows.length; i++) {
+                            const row = newProductRows[i];
+                            if ((row[npSalePrIdCol] || "").toString().trim() === id.trim()) {
+                                const rowProductId = (row[npIdCol] || "").toString().trim();
+                                const matchingItem = finalItems ? finalItems.find(p => (p['รหัส'] || "").toString().trim() === rowProductId) : null;
+
+                                if (!matchingItem) {
+                                    rowsToDelete.push(i);
+                                } else {
+                                    const newQty = parseFloat(matchingItem.quantity) || 0;
+                                    const unitPrice = parseFloat(row[npUnitPriceCol]) || parseFloat(matchingItem['ราคาขาย']) || 0;
+                                    const newPrice = newQty * unitPrice;
+
+                                    const updatedRow = [...row];
+                                    if (npQtyCol !== -1) {
+                                        while (updatedRow.length <= npQtyCol) updatedRow.push("");
+                                        updatedRow[npQtyCol] = String(newQty);
+                                    }
+                                    if (npPriceCol !== -1) {
+                                        while (updatedRow.length <= npPriceCol) updatedRow.push("");
+                                        updatedRow[npPriceCol] = String(newPrice);
+                                    }
+                                    rowsToUpdate.push({ rowIndex: i, rowData: updatedRow });
+                                }
+                            }
+                        }
+
+                        // Perform updates
+                        for (const update of rowsToUpdate) {
+                            await sheetsWrite.spreadsheets.values.update({
+                                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                                range: `${newProductSheetName}!A${update.rowIndex + 1}`,
+                                valueInputOption: "USER_ENTERED",
+                                requestBody: { values: [update.rowData] }
+                            });
+                        }
+
+                        // Perform deletes
+                        if (rowsToDelete.length > 0) {
+                            rowsToDelete.sort((a, b) => b - a);
+                            const deleteRequests = rowsToDelete.map((rowIndex) => ({
+                                deleteDimension: {
+                                    range: {
+                                        sheetId: npSheetMeta.properties.sheetId,
+                                        dimension: "ROWS",
+                                        startIndex: rowIndex,
+                                        endIndex: rowIndex + 1
+                                    }
+                                }
+                            }));
+                            await sheetsWrite.spreadsheets.batchUpdate({
+                                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                                requestBody: { requests: deleteRequests }
+                            });
+                        }
+                        
+                        sheetCache.delete("new_Product_all");
+                    }
+                }
+            } catch (errNewProduct) {
+                console.error("[ERROR] Failed to update new_Product sheet:", errNewProduct.message);
             }
 
             // Update Sale_pr
@@ -682,6 +779,57 @@ module.exports = (dependencies) => {
                 const requests = rowsToDelete.map((rowIndex) => ({ deleteDimension: { range: { sheetId: sheetId, dimension: "ROWS", startIndex: rowIndex, endIndex: rowIndex + 1 } } }));
                 await sheetsWrite.spreadsheets.batchUpdate({ spreadsheetId: process.env.GOOGLE_SHEET_ID, requestBody: { requests } });
             }
+
+            // Also delete matching orther/other rows from new_Product sheet
+            const ortherProductCodes = productCodes.filter(code => {
+                const c = String(code).trim().toLowerCase();
+                return c.startsWith("orther") || c.startsWith("other");
+            });
+
+            if (ortherProductCodes.length > 0) {
+                const newProductSheetName = "new_Product";
+                const newProductResult = await sheetsWrite.spreadsheets.values.get({
+                    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                    range: `${newProductSheetName}!A1:AZ`
+                });
+                const newProductRows = newProductResult.data.values ?? [];
+                if (newProductRows.length > 0) {
+                    const npHeaders = newProductRows[0];
+                    const npIdCol = npHeaders.indexOf("id");
+                    const npSalePrIdCol = npHeaders.indexOf("sale_pr_id");
+
+                    if (npIdCol !== -1 && npSalePrIdCol !== -1) {
+                        const npSheetMeta = spreadsheet.data.sheets.find(s => s.properties.title === newProductSheetName);
+                        const npRowsToDelete = [];
+                        for (let i = 1; i < newProductRows.length; i++) {
+                            const row = newProductRows[i];
+                            if ((row[npSalePrIdCol] || "").toString().trim() === id.trim() && ortherProductCodes.includes((row[npIdCol] || "").toString().trim())) {
+                                npRowsToDelete.push(i);
+                            }
+                        }
+
+                        if (npRowsToDelete.length > 0) {
+                            npRowsToDelete.sort((a, b) => b - a);
+                            const deleteRequests = npRowsToDelete.map((rowIndex) => ({
+                                deleteDimension: {
+                                    range: {
+                                        sheetId: npSheetMeta.properties.sheetId,
+                                        dimension: "ROWS",
+                                        startIndex: rowIndex,
+                                        endIndex: rowIndex + 1
+                                    }
+                                }
+                            }));
+                            await sheetsWrite.spreadsheets.batchUpdate({
+                                spreadsheetId: process.env.GOOGLE_SHEET_ID,
+                                requestBody: { requests: deleteRequests }
+                            });
+                        }
+                        sheetCache.delete("new_Product_all");
+                    }
+                }
+            }
+
             res.json({ deleted: rowsToDelete.length });
         } catch (err) {
             res.status(500).json({ error: err.message });

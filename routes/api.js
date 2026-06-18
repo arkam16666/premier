@@ -4,7 +4,7 @@ const path = require('path');
 
 module.exports = (dependencies) => {
     const router = express.Router();
-    const { sheets, process } = dependencies;
+    const { sheets, process, getsheet } = dependencies;
 
     // ดึง URL ของ Python API จาก .env หรือใช้ default เป็น https://pdf.thanadon.click
     const PYTHON_API_BASE = process.env.PYTHON_API_BASE_URL || 'https://pdf.thanadon.click';
@@ -43,9 +43,12 @@ module.exports = (dependencies) => {
     router.get("/api/sub_sale", async (req, res) => {
         const { id } = req.query;
         if (!id) return res.status(400).json({ success: false, error: "Missing ID" });
-        const { getsheet } = dependencies;
         try {
-            const items = await getsheet(id, "sub_sales_pr");
+            const itemsRaw = await getsheet(id, "sub_sales_pr");
+            const items = itemsRaw.filter(item => {
+                const code = (item['สินค้า'] || "").toString().trim().toLowerCase();
+                return !code.startsWith("orther") && !code.startsWith("other");
+            });
             res.json({ success: true, items });
         } catch (err) {
             res.status(500).json({ success: false, error: err.message });
