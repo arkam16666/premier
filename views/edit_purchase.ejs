@@ -240,6 +240,25 @@
                             'อัตราภาษีซื้อ': Math.max(0, parseFloat((productInfo['อัตราภาษีซื้อ'] || '0').toString().replace('%', '')) || 0),
                             quantity: qty
                         });
+                    } else {
+                        // Fallback for custom / 'orther' / 'other' items not in the standard product list
+                        const productName = row.cells[2].innerText.trim();
+                        const productSpec = row.cells[3].innerText.trim();
+                        const unit = row.cells[5].innerText.trim();
+                        const rawPrice = parseFloat(row.cells[6].innerText.replace(/,/g, '')) || 0;
+                        const rawTaxAmt = parseFloat(row.cells[8].innerText.replace(/,/g, '')) || 0;
+                        const rawAmt = qty * rawPrice;
+                        const taxRate = rawAmt > 0 ? (rawTaxAmt / rawAmt) * 100 : 0;
+
+                        finalItems.push({
+                            'รหัส': productCode,
+                            'ชื่อ': productName,
+                            'ชื่อจำเพราะ': productSpec,
+                            'หน่วย': unit,
+                            'ราคาซื้อ': rawPrice,
+                            'อัตราภาษีซื้อ': taxRate,
+                            quantity: qty
+                        });
                     }
                 }
             });

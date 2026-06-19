@@ -588,6 +588,11 @@ module.exports = (dependencies) => {
                     }
                 }
             }
+            // Clear cache to ensure UI updates immediately
+            sheetCache.delete("Sale_pr_all");
+            sheetCache.delete("sub_sales_pr_all");
+            sheetCache.delete("new_Product_all");
+
             if (logAction) logAction(req.session ? req.session.user : null, 'Update Order', 'Updated order ID: ' + id, req.headers['x-forwarded-for'] || req.socket.remoteAddress);
             res.json({ success: true, message: "บันทึกการเปลี่ยนแปลงทั้งหมดเรียบร้อยแล้ว" });
         } catch (err) {
@@ -665,6 +670,10 @@ module.exports = (dependencies) => {
                     }
                 }
             }
+            // Clear cache to ensure UI updates immediately
+            sheetCache.delete("sales_so_all");
+            sheetCache.delete("sub_sales_so_all");
+
             if (logAction) logAction(req.session ? req.session.user : null, 'Update Order', 'Updated order ID: ' + id, req.headers['x-forwarded-for'] || req.socket.remoteAddress);
             res.json({ success: true, message: "บันทึกการเปลี่ยนแปลงทั้งหมดเรียบร้อยแล้ว" });
         } catch (err) {
@@ -830,6 +839,10 @@ module.exports = (dependencies) => {
                 }
             }
 
+            // Clear cache to ensure UI updates immediately
+            sheetCache.delete("sub_sales_pr_all");
+            sheetCache.delete("new_Product_all");
+
             res.json({ deleted: rowsToDelete.length });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -852,6 +865,8 @@ module.exports = (dependencies) => {
                 return [id, p.รหัส || "", p.ชื่อ || "", p.ชื่อจำเพราะ || "", qty, p.หน่วย || "", price, amount, tax, amount + tax];
             });
             await sheetsWrite.spreadsheets.values.append({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A:J`, valueInputOption: "USER_ENTERED", requestBody: { values } });
+            // Clear cache
+            sheetCache.delete("sub_sales_pr_all");
             res.json({ success: true, added: products.length });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -884,6 +899,8 @@ module.exports = (dependencies) => {
             if (editorColIdx !== -1) newRow[editorColIdx] = userName;
 
             await sheetsWrite.spreadsheets.values.update({ spreadsheetId: process.env.GOOGLE_SHEET_ID, range: `${sheetName}!A${rowIndex + 1}`, valueInputOption: "USER_ENTERED", requestBody: { values: [newRow] } });
+            // Clear cache
+            sheetCache.delete("Sale_pr_all");
             res.json({ success: true, message: "อัปเดตข้อมูลสำเร็จ" });
         } catch (err) {
             res.status(500).json({ error: err.message });

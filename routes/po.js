@@ -207,6 +207,10 @@ module.exports = (dependencies) => {
                     }
                 }
             }
+            // Clear cache to ensure the web page updates immediately
+            sheetCache.delete("precher_po_all");
+            sheetCache.delete("sub_precher_po_all");
+
             res.json({ success: true, message: "บันทึกการเปลี่ยนแปลงทั้งหมดเรียบร้อยแล้ว" });
         } catch (err) {
             res.status(500).json({ error: err.message });
